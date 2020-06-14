@@ -9,11 +9,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
 
-<meta name="author" content="Joschka Schwarz" />
+<meta name="author" content="Milena Roesch" />
 
-<meta name="date" content="2020-04-01" />
+<meta name="date" content="2020-06-14" />
 
-<title>Journal (reproducible report)</title>
+<title>Milena’s Journal</title>
 
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -391,9 +391,9 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Journal (reproducible report)</h1>
-<h4 class="author">Joschka Schwarz</h4>
-<h4 class="date">04/01/2020</h4>
+<h1 class="title toc-ignore">Milena’s Journal</h1>
+<h4 class="author">Milena Roesch</h4>
+<h4 class="date">06/14/2020</h4>
 
 </div>
 
@@ -403,11 +403,10 @@ div.tocify {
     background-color: #2DC6D6;
 }
 </style>
-<p>IMPORTANT: You can delete everything in here and start fresh. You might want to start by not deleting anything above this line until you know what that stuff is doing.</p>
-<p>This is an .Rmd file. It is plain text with special features. Any time you write just like this, it will be compiled to normal text in the website. If you put a # in front of your text, it will create a top level-header.</p>
+<p># Testing some functions</p>
 <div id="my-first-post" class="section level1">
 <h1><span class="header-section-number">1</span> My first post</h1>
-<p>2018 | 7 | 23 Last compiled: 2020-03-29</p>
+<p>2018 | 7 | 23 Last compiled: 2020-06-14</p>
 <p>Notice that whatever you define as a top level header, automatically gets put into the table of contents bar on the left.</p>
 <div id="second-level-header" class="section level2">
 <h2><span class="header-section-number">1.1</span> Second level header</h2>
@@ -420,7 +419,7 @@ div.tocify {
 </div>
 <div id="my-second-post-note-the-order" class="section level1">
 <h1><span class="header-section-number">2</span> My second post (note the order)</h1>
-<p>2018 | 7 | 23 Last compiled: 2020-03-29</p>
+<p>2018 | 7 | 23 Last compiled: 2020-06-14</p>
 <p>I’m writing this tutorial going from the top down. And, this is how it will be printed. So, notice the second post is second in the list. If you want your most recent post to be at the top, then make a new post starting at the top. If you want the oldest first, do, then keep adding to the bottom</p>
 </div>
 <div id="adding-r-stuff" class="section level1">
@@ -567,7 +566,7 @@ $(document).ready(function ()  {
       theme: "bootstrap3",
       context: '.toc-content',
       hashGenerator: function (text) {
-        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_').toLowerCase();
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
       },
       ignoreSelector: ".toc-ignore",
       scrollTo: 0
