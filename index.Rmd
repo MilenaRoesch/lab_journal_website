@@ -21,8 +21,8 @@ output: html_document
 
 This is the documentation of my work in the NIT Data Science course in the summer semester 2020. Over the course of the semester, I will use this website to display my progress in learning R for business analytics. 
 
+
 ## Self-Introduction
-![](images/ANJ_4405.jpg)
 
 Hi, 
 
@@ -38,9 +38,11 @@ At work, I try to become an expert for AI-related solutions and currently also e
 </div>
 <div class="col-sm-6">
 
-### [Data Science at NIT](https://tuhh-w11.github.io/data-science/)
+<a href = "https://tuhh-w11.github.io/data-science/"> 
+![Data Science at the NIT](images/logo_nit_facebook.png){width=350px}
 
-<a href = "https://tuhh-w11.github.io/data-science/">
-![](images/logo_nit_facebook.png)
+
+![](images/ANJ_4405.jpg){width=350px}
+
 </a>
 </div>
