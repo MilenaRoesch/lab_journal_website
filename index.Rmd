@@ -17,19 +17,22 @@ output: html_document
 <div class="row" style="padding-top: 30px;">
 <div class="col-sm-6">
 
-# **My Lab Journal**
+# **Welcome to My Lab Journal**
 
-This is a template example for lab journaling. Students in the data science course at NIT will use this template to learn R for business analytics. Students can replace this text as they wish.
+This is the documentation of my work in the NIT Data Science course in the summer semester 2020. Over the course of the semester, I will use this website to display my progress in learning R for business analytics. 
 
-## How to use
+## Self-Introduction
+![](images/ANJ_4405.jpg)
 
-1. fork this repository for this website and follow instructions on read me to get set up. [https://tuhh-w11.github.io/lab_journal_website/](https://tuhh-w11.github.io/lab_journal_website/)
+Hi, 
 
-2. Blog/journal what you are doing in R, by editing the Journal.Rmd. See the [Journal page](https://tuhh-w11.github.io/lab_journal_website/) for an example of what to do to get started learning R.
+my name is Milena, currently living in Cologne to work as a Digital Strategy Consultant at IBM while studying Technology Management at the NIT in Hamburg. Before joining the NIT I did my bachelor's in business administration at the university of Mannheim and worked in Marketing.
 
-3. See the [links page](https://tuhh-w11.github.io/lab_journal_website//Links.html) for lots of helpful links on learning R.
+In my free time I love to read, party and travel. I already lived one year in India during my voluntary social year, half a year in South Korea (semester abroad) and have visited many other countries as a tourist. 
 
-4. Change everything to make it your own.
+## My Motivation for Data Science
+
+At work, I try to become an expert for AI-related solutions and currently also engage in a global quantum computing community. For both having a basic understanding about Data Science is really helpful. Additionally, I already am in the progress of teaching myself Python, so I hope that this course actually ties all these interests together.
 
 
 </div>
