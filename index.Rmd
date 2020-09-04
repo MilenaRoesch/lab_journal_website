@@ -41,6 +41,8 @@ At work, I try to become an expert for AI-related solutions and currently also e
 <a href = "https://tuhh-w11.github.io/data-science/"> 
 ![Data Science at the NIT](images/logo_nit_facebook.png){width=350px}
 
+##
+##
 
 ![](images/ANJ_4405.jpg){width=350px}
 
