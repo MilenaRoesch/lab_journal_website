@@ -428,16 +428,23 @@ div.tocify {
 <li><code>list.files()</code> This function lists all the names of each file in a given R project.</li>
 </ol>
 <pre class="r"><code>list.files()</code></pre>
-<pre><code>##  [1] &quot;_site.yml&quot;                 &quot;data_wrangling.html&quot;      
-##  [3] &quot;data_wrangling.Rmd&quot;        &quot;dictionary.Rmd&quot;           
-##  [5] &quot;docs&quot;                      &quot;ggplot_graphs.Rmd&quot;        
-##  [7] &quot;images&quot;                    &quot;index.Rmd&quot;                
-##  [9] &quot;journal.Rmd&quot;               &quot;journal_cache&quot;            
-## [11] &quot;journal_files&quot;             &quot;lab_journal_website.Rproj&quot;
-## [13] &quot;links.Rmd&quot;                 &quot;machine_learning.Rmd&quot;     
-## [15] &quot;README.md&quot;                 &quot;Rprof.out&quot;                
-## [17] &quot;site_libs&quot;                 &quot;testfile.rds&quot;             
-## [19] &quot;testfile.txt&quot;</code></pre>
+<pre><code>##  [1] &quot;__MACOSX&quot;                  &quot;_site.yml&quot;                
+##  [3] &quot;00_data&quot;                   &quot;00_getting_started&quot;       
+##  [5] &quot;00_scripts&quot;                &quot;01_import&quot;                
+##  [7] &quot;02_tidy&quot;                   &quot;03_visualise&quot;             
+##  [9] &quot;04_model&quot;                  &quot;05_communicate&quot;           
+## [11] &quot;bullshit&quot;                  &quot;data_wrangling.html&quot;      
+## [13] &quot;data_wrangling.Rmd&quot;        &quot;dictionary.html&quot;          
+## [15] &quot;dictionary.Rmd&quot;            &quot;DS_business_case.Rproj&quot;   
+## [17] &quot;DS_business_case_01&quot;       &quot;ggplot_graphs.html&quot;       
+## [19] &quot;ggplot_graphs.Rmd&quot;         &quot;images&quot;                   
+## [21] &quot;index.html&quot;                &quot;index.Rmd&quot;                
+## [23] &quot;journal.html&quot;              &quot;journal.Rmd&quot;              
+## [25] &quot;lab_journal_website.Rproj&quot; &quot;links.html&quot;               
+## [27] &quot;links.Rmd&quot;                 &quot;machine_learning.html&quot;    
+## [29] &quot;machine_learning.Rmd&quot;      &quot;README.md&quot;                
+## [31] &quot;Rprof.out&quot;                 &quot;site_libs&quot;                
+## [33] &quot;testfile.rds&quot;              &quot;testfile.txt&quot;</code></pre>
 <p>…</p>
 <hr />
 </div>
@@ -599,19 +606,19 @@ plot(x)</code></pre>
 <h2><span class="header-section-number">1.14</span> Distributions</h2>
 <p>rnorm() This function inserts a normal distribution.</p>
 <pre class="r"><code>rnorm(100, mean = 50, sd=2)</code></pre>
-<pre><code>##   [1] 52.02274 48.48698 49.92544 49.45359 51.92083 53.22582 48.71752 50.35232
-##   [9] 50.25898 51.03725 51.34293 51.90006 48.69209 50.12244 53.61097 52.78895
-##  [17] 49.81937 49.98204 52.26085 51.91016 52.50101 51.87631 49.27828 53.90017
-##  [25] 47.98871 47.46204 50.86043 48.58992 46.32163 54.51739 53.62559 49.30362
-##  [33] 51.35826 48.38942 46.96705 48.85617 50.88283 53.43830 49.19237 45.15653
-##  [41] 49.79396 47.81213 49.05680 49.48662 52.17584 52.62962 51.49778 50.89746
-##  [49] 48.96315 51.82548 49.86634 53.63033 52.12373 50.86553 50.81602 48.71978
-##  [57] 52.23339 48.00375 49.93733 54.04989 50.72555 49.67370 48.51600 50.37017
-##  [65] 48.30689 49.32787 49.54819 52.02512 50.52696 49.59195 47.62815 52.25755
-##  [73] 50.02660 49.20774 50.40176 49.26826 52.44641 49.97176 50.73008 48.63686
-##  [81] 49.33390 48.93853 48.99533 47.44242 52.22174 52.64452 50.88608 51.16371
-##  [89] 47.87420 51.01813 51.72585 49.14954 50.03816 48.07549 54.20292 48.75142
-##  [97] 49.57086 47.96235 48.15600 49.77085</code></pre>
+<pre><code>##   [1] 52.10656 50.64381 48.89305 49.76054 52.34159 49.92423 51.82762 48.74500
+##   [9] 49.74547 45.62459 48.25150 48.09250 48.80625 51.43606 52.02166 50.51375
+##  [17] 50.09736 51.04338 48.15424 52.41179 47.95812 49.84331 49.47344 49.58539
+##  [25] 52.10119 49.85645 51.05446 48.63922 51.80412 47.82267 52.21391 53.32543
+##  [33] 50.10013 49.59685 50.67247 51.95427 48.29523 50.28372 52.69868 51.52348
+##  [41] 48.61224 50.82538 49.28557 47.86610 48.74965 50.47745 52.75657 47.65113
+##  [49] 50.68240 50.57710 48.55897 50.91075 48.03528 48.66702 49.77673 48.65629
+##  [57] 50.88482 52.69052 53.08983 49.70472 50.51430 52.28742 47.84043 53.41802
+##  [65] 48.86656 49.84294 45.36680 48.21914 50.42060 50.12786 53.09038 53.85421
+##  [73] 50.96150 49.78003 47.84013 49.84839 45.34340 54.78880 53.93685 49.22017
+##  [81] 48.03833 47.54455 48.43935 48.73788 49.88901 47.28226 50.93996 52.52165
+##  [89] 50.96675 50.41852 52.08562 50.00019 52.04068 50.43098 47.59245 50.56913
+##  [97] 49.35786 49.38743 48.64156 52.61984</code></pre>
 </div>
 <div id="programming" class="section level2">
 <h2><span class="header-section-number">1.15</span> Programming</h2>
