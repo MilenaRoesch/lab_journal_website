@@ -9,7 +9,7 @@ navbar:
             - text: "Data Science Fundamentals"
               href: journal.html
             - text: "Machine Learning"
-              href: Machine-Learning_journal.html
+              href: machine-learning_journal.html
     - text: "Class notes"
       menu:
             - text: "Dictionary"
