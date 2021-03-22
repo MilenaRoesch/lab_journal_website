@@ -1667,6 +1667,6 @@ ggplot(explanation, aes(x = case, y = fct_inorder(feature_desc), fill =feature_w
 ```
 
 # (Session 13 - Deep Learning) - OUT OF SCOPE
-
+Out of Scope 
 
 # Reporting
