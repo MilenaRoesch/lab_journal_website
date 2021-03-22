@@ -11,7 +11,7 @@
 
 <meta name="author" content="Joschka Schwarz" />
 
-<meta name="date" content="2020-09-04" />
+<meta name="date" content="2021-03-22" />
 
 <title>Dictionary</title>
 
@@ -356,8 +356,20 @@ div.tocify {
         <li>
   <a href="index.html">Home</a>
 </li>
-<li>
-  <a href="journal.html">Journal</a>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    Journal
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="journal.html">Data Science Fundamentals</a>
+    </li>
+    <li>
+      <a href="machine-learning_journal.html">Machine Learning</a>
+    </li>
+  </ul>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
@@ -405,7 +417,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Dictionary</h1>
 <h4 class="author">Joschka Schwarz</h4>
-<h4 class="date">2020-09-04</h4>
+<h4 class="date">2021-03-22</h4>
 
 </div>
 
@@ -428,23 +440,31 @@ div.tocify {
 <li><code>list.files()</code> This function lists all the names of each file in a given R project.</li>
 </ol>
 <pre class="r"><code>list.files()</code></pre>
-<pre><code>##  [1] &quot;__MACOSX&quot;                  &quot;_site.yml&quot;                
-##  [3] &quot;00_data&quot;                   &quot;00_getting_started&quot;       
-##  [5] &quot;00_scripts&quot;                &quot;01_import&quot;                
-##  [7] &quot;02_tidy&quot;                   &quot;03_visualise&quot;             
-##  [9] &quot;04_model&quot;                  &quot;05_communicate&quot;           
-## [11] &quot;bullshit&quot;                  &quot;data_wrangling.html&quot;      
-## [13] &quot;data_wrangling.Rmd&quot;        &quot;dictionary.html&quot;          
-## [15] &quot;dictionary.Rmd&quot;            &quot;DS_business_case.Rproj&quot;   
-## [17] &quot;DS_business_case_01&quot;       &quot;ggplot_graphs.html&quot;       
-## [19] &quot;ggplot_graphs.Rmd&quot;         &quot;images&quot;                   
-## [21] &quot;index.html&quot;                &quot;index.Rmd&quot;                
-## [23] &quot;journal.html&quot;              &quot;journal.Rmd&quot;              
-## [25] &quot;lab_journal_website.Rproj&quot; &quot;links.html&quot;               
-## [27] &quot;links.Rmd&quot;                 &quot;machine_learning.html&quot;    
-## [29] &quot;machine_learning.Rmd&quot;      &quot;README.md&quot;                
-## [31] &quot;Rprof.out&quot;                 &quot;site_libs&quot;                
-## [33] &quot;testfile.rds&quot;              &quot;testfile.txt&quot;</code></pre>
+<pre><code>##  [1] &quot;__MACOSX&quot;                            &quot;_site.yml&quot;                          
+##  [3] &quot;00_cheatsheet&quot;                       &quot;00_data&quot;                            
+##  [5] &quot;00_getting_started&quot;                  &quot;00_scripts&quot;                         
+##  [7] &quot;01_import&quot;                           &quot;02_tidy&quot;                            
+##  [9] &quot;03_visualise&quot;                        &quot;04_model&quot;                           
+## [11] &quot;05_communicate&quot;                      &quot;12_Lime_Part II.R&quot;                  
+## [13] &quot;bike_data.json&quot;                      &quot;bike_data_colors_tbl.rds&quot;           
+## [15] &quot;bike_data_tbl.rds&quot;                   &quot;bullshit&quot;                           
+## [17] &quot;Chinook_Sqlite.sqlite&quot;               &quot;data_wrangling.html&quot;                
+## [19] &quot;data_wrangling.Rmd&quot;                  &quot;dictionary.html&quot;                    
+## [21] &quot;dictionary.Rmd&quot;                      &quot;dictionary_files&quot;                   
+## [23] &quot;docs&quot;                                &quot;DS_business_case.Rproj&quot;             
+## [25] &quot;DS_business_case_01&quot;                 &quot;ggplot_graphs.html&quot;                 
+## [27] &quot;ggplot_graphs.Rmd&quot;                   &quot;ggplot_graphs_files&quot;                
+## [29] &quot;images&quot;                              &quot;index.html&quot;                         
+## [31] &quot;index.Rmd&quot;                           &quot;journal.html&quot;                       
+## [33] &quot;journal.Rmd&quot;                         &quot;journal_cache&quot;                      
+## [35] &quot;journal_files&quot;                       &quot;lab_journal_website.Rproj&quot;          
+## [37] &quot;links.html&quot;                          &quot;links.Rmd&quot;                          
+## [39] &quot;Machine-Learning_journal-test_cache&quot; &quot;Machine-Learning_journal-test_files&quot;
+## [41] &quot;Machine-Learning_journal.Rmd&quot;        &quot;Machine-Learning_journal_cache&quot;     
+## [43] &quot;Machine-Learning_journal_files&quot;      &quot;machine_learning.Rmd&quot;               
+## [45] &quot;README.md&quot;                           &quot;Rprof.out&quot;                          
+## [47] &quot;site_libs&quot;                           &quot;testfile.rds&quot;                       
+## [49] &quot;testfile.txt&quot;</code></pre>
 <p>…</p>
 <hr />
 </div>
@@ -606,19 +626,19 @@ plot(x)</code></pre>
 <h2><span class="header-section-number">1.14</span> Distributions</h2>
 <p>rnorm() This function inserts a normal distribution.</p>
 <pre class="r"><code>rnorm(100, mean = 50, sd=2)</code></pre>
-<pre><code>##   [1] 52.10656 50.64381 48.89305 49.76054 52.34159 49.92423 51.82762 48.74500
-##   [9] 49.74547 45.62459 48.25150 48.09250 48.80625 51.43606 52.02166 50.51375
-##  [17] 50.09736 51.04338 48.15424 52.41179 47.95812 49.84331 49.47344 49.58539
-##  [25] 52.10119 49.85645 51.05446 48.63922 51.80412 47.82267 52.21391 53.32543
-##  [33] 50.10013 49.59685 50.67247 51.95427 48.29523 50.28372 52.69868 51.52348
-##  [41] 48.61224 50.82538 49.28557 47.86610 48.74965 50.47745 52.75657 47.65113
-##  [49] 50.68240 50.57710 48.55897 50.91075 48.03528 48.66702 49.77673 48.65629
-##  [57] 50.88482 52.69052 53.08983 49.70472 50.51430 52.28742 47.84043 53.41802
-##  [65] 48.86656 49.84294 45.36680 48.21914 50.42060 50.12786 53.09038 53.85421
-##  [73] 50.96150 49.78003 47.84013 49.84839 45.34340 54.78880 53.93685 49.22017
-##  [81] 48.03833 47.54455 48.43935 48.73788 49.88901 47.28226 50.93996 52.52165
-##  [89] 50.96675 50.41852 52.08562 50.00019 52.04068 50.43098 47.59245 50.56913
-##  [97] 49.35786 49.38743 48.64156 52.61984</code></pre>
+<pre><code>##   [1] 50.97903 49.88636 53.90945 46.25755 48.74650 48.51530 48.07378 48.58106
+##   [9] 47.68977 53.56807 46.57252 51.48701 51.53098 52.91493 48.55535 48.16677
+##  [17] 49.04732 51.05734 53.01247 50.27906 50.52929 50.01649 52.85066 50.31923
+##  [25] 53.97229 50.00514 50.13038 49.38350 51.74733 49.41811 50.33018 49.16843
+##  [33] 48.88839 50.32161 49.66431 49.71102 49.83274 47.93198 48.30545 50.66358
+##  [41] 49.82288 46.68783 49.00095 50.41420 48.45890 47.74940 49.20978 49.53263
+##  [49] 48.51999 46.25771 48.87806 49.60879 49.09730 49.40083 48.00042 51.29826
+##  [57] 48.43419 50.00230 52.28177 48.99773 48.17887 50.66816 48.84606 51.31060
+##  [65] 47.87243 51.94092 51.65751 51.06681 51.54973 50.69203 49.91778 50.63382
+##  [73] 49.57932 45.89041 52.16090 46.89779 51.87395 47.88927 49.60047 49.49219
+##  [81] 48.56849 52.46717 51.19020 49.08854 47.48462 49.84342 50.32555 49.94085
+##  [89] 49.90852 50.50904 49.33780 54.85693 49.81763 47.28891 50.84549 45.64498
+##  [97] 52.02758 47.88951 48.18101 53.13731</code></pre>
 </div>
 <div id="programming" class="section level2">
 <h2><span class="header-section-number">1.15</span> Programming</h2>

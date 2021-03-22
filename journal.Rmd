@@ -1,5 +1,5 @@
 ---
-title: "Milena's Journal"
+title: "Data Science Fundamentals"
 author: "Milena Roesch"
 date: "09/04/2020"
 output:
@@ -20,15 +20,11 @@ output:
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(message=FALSE,warning=FALSE, cache=TRUE)
+knitr::opts_chunk$set(message=FALSE,warning=FALSE, cache=TRUE, cache.lazy = FALSE)
 ```
-
-\# Testing some functions
-
-
-# Olist - Challenge 1, Session 2
-
 2020 | 9 | 3 Last compiled: `r Sys.Date()`
+
+# Olist - Session 2 - Intro to the tidyverse
 
 The first challenge of the course consisted of two parts:
 1. Sales by location and year
@@ -234,32 +230,372 @@ revenue_by_year_engl_cat_main_tbl %>%
 
 ```
 
-# My second post (note the order)
-
-2018 | 7 | 23 Last compiled: `r Sys.Date()`
-
-xy
-
-# Adding R stuff
-
-So far this is just a blog where you can write in plain text and serve your writing to a webpage. One of the main purposes of this lab journal is to record your progress learning R. The reason I am asking you to use this process is because you can both make a website, and a lab journal, and learn R all in R-studio. This makes everything really convenient and in the sam place. 
-
-So, let's say you are learning how to make a histogram in R. For example, maybe you want to sample 100 numbers from a normal distribution with mean = 0, and standard deviation =1, and then you want to plot a histogram. You can do this right here by using an r code block, like this:
-
+# Data Scraping from an API and a bike website - Session 3 - Data Acquisition
+## Scraping Twitter Data
 ```{r}
-samples <- rnorm(100, mean=0, sd=1)
-hist(samples)
+#install.packages("twitteR") #install package
+library(twitteR) #load package
+
+#consumer_key <- #not able to be shown on My Journal Website due to security reasons
+#consumer_secret <- #not able to be shown on My Journal Website due to security reasons 
+#access_token <- #not able to be shown on My Journal Website due to security reasons
+#access_secret <- #not able to be shown on My Journal Website due to security reasons
+
+#setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+
+#virus <- searchTwitter('#wendlergate', n = 200, since = '2020-09-01', retryOnRateLimit = 1e3)
+#virus_df = twListToDF(virus)
 ```
 
-When you knit this R Markdown document, you will see that the histogram is printed to the page, along with the R code. This document can be set up to hide the R code in the webpage, just delete the comment (hashtag), from the cold folding option in the yaml header up top. For purposes of letting yourself see the code, and me see the code, best to keep it the way that it is. You learn all of these things and more can be customized in each R code block.
 
-# The big idea
+## Webscraping 
+```{r}
+# WEBSCRAPING ----
 
-Use this lab journal to record what you do in R. This way I will be able to see what you are doing and help you along the way. You will also be creating a repository of all the things you do. You can make posts about everything. Learning specific things in R (project unrelated), and doing things for the project that we will discuss at the beginning of the Fall semester. You can get started now by fiddling around with googling things, and trying stuff out in R. I've placed some helpful starting links in the links page on this website
+# 1.0 LIBRARIES ----
 
-# What can you do right now by yourself?
+library(tidyverse) # Main Package - Loads dplyr, purrr
+library(rvest)     # HTML Hacking & Web Scraping
+library(xopen)     # Quickly opening URLs
+library(jsonlite)  # converts JSON files to R objects
+library(glue)      # concatenate strings
+library(stringi)   # character string/text processing
+library(stringr)
+library(RSQLite)
 
-It's hard to learn programming when you don't have specific problems that you are trying to solve. Everything just seems abstract.
+# 2.0 OPEN URL ----
+url_home          <- "https://www.radon-bikes.de/roadbike/carbon/bikegrid/"
+xopen(url_home) # Open links directly from RStudio to inspect them
 
-I wrote an [introductory programming book that introduces R](https://crumplab.github.io/programmingforpsych/), and gives some [concrete problems for you to solve](https://crumplab.github.io/programmingforpsych/programming-challenges-i-learning-the-fundamentals.html). 
+# Read in the HTML for category of carbon bikes
+html_home         <- read_html(url_home)
 
+# 3.0 WEB SCRAPING ----
+#Web scrape the product names
+product_name_tbl <- html_home %>%
+  #Get the nodes for the product names ...
+  html_nodes(css = ".m-bikegrid__info > a > div > h4") %>%
+  # ...and extract the text of the html attribute
+  html_text() %>%
+  # Delete the unnecessary formatting
+  str_replace_all("[\t\n\r\v\f]" , "") %>%
+  # Delete whitespace
+  trimws() %>%
+  # Convert vector to tibble
+  enframe(name = "position", value = "product_name")
+
+#Web scrape the product prices
+product_price_tbl <- html_home %>%
+  #Get the nodes for the product prices ...
+  html_nodes(css = ".currency_eur > .m-bikegrid__price--active") %>%
+  # ...and extract the information of the span attribute
+  html_text("span") %>%
+  # Convert vector to tibble
+  enframe(name = "position", value = "product_price")
+
+# 4.0 DATABASE  ----
+# Create a database
+conn <- RSQLite::dbConnect(drv    = SQLite(), 
+                          dbname = "00_data/03_bike_shop/Radon_carbon_bikes.sqlite")
+# Write tables to database
+dbWriteTable(conn, "bike_names", product_name_tbl, overwrite=TRUE)
+dbWriteTable(conn, "bike_prices", product_price_tbl, overwrite=TRUE)
+
+# List tables of database 
+# dbListTables(conn)
+
+# Get price and respective product Name from database
+dbGetQuery(conn, "SELECT product_name, product_price FROM bike_names, bike_prices WHERE bike_names.position = bike_prices.position")
+dbDisconnect(conn)
+```
+
+# Data Wrangling with Patent Data - Session 4 - Data Wrangling
+```{r}
+# 1.0 LIBRARIES ----
+#install.packages("data.table")
+#install.packages("vroom")
+#install.packages("tictoc")
+
+
+# Tidyverse
+library(tidyverse)
+library(vroom)
+
+# Data Table
+library(data.table)
+
+# Counter
+library(tictoc)
+
+# Importing Data ------
+# assignee
+col_types <- list(
+  id = col_character(),
+  type = col_skip(),
+  name_first = col_skip(),
+  name_last = col_skip(),
+  organization = col_character()
+)
+
+assignee_tbl <- vroom(
+  file       = "00_data/04_patents/assignee.tsv", 
+  delim      = "\t", 
+  col_names = names(col_types),
+  col_types  = col_types,
+  na         = c("", "NA", "NULL")
+)
+
+setDT(assignee_tbl)
+
+# patent assignee
+col_types <- list(
+  patent_id = col_character(),
+  assignee_id = col_character(),
+  location_id = col_skip()
+)
+
+patent_assignee_tbl <- vroom(
+  file       = "00_data/04_patents/patent_assignee.tsv", 
+  delim      = "\t", 
+  col_names = names(col_types),
+  col_types  = col_types,
+  na         = c("", "NA", "NULL")
+)
+
+setDT(patent_assignee_tbl)
+
+# patent
+col_types <- list(
+  id = col_character(),
+  type = col_skip(),
+  number = col_skip(),
+  country = col_skip(),
+  date = col_date("%Y-%m-%d"),
+  abstract = col_skip(),
+  title = col_skip(),
+  kind = col_skip(),
+  num_claims = col_skip(),
+  filename = col_skip(),
+  withdrawn = col_skip()
+ )
+ 
+ patent_tbl <- vroom(
+   file       = "00_data/04_patents/patent.tsv", 
+   delim      = "\t", 
+   col_names  = names(col_types),
+   col_types  = col_types,
+   na         = c("", "NA", "NULL")
+ )
+ 
+ setDT(patent_tbl)
+ 
+# uspc
+col_types <- list(
+  uuid = col_skip(),
+  patent_id = col_character(),
+  mainclass_id = col_character(),
+  subclass_id = col_skip(),
+  sequence = col_skip()
+)
+
+uspc_tbl <- vroom(
+  file       = "00_data/04_patents/uspc.tsv",
+  delim      = "\t",
+  col_names  = names(col_types),
+  col_types  = col_types,
+  na         = c("", "NA", "NULL")
+)
+
+setDT(uspc_tbl)
+
+# mainclass description
+col_types <- list(
+  id = col_character(),
+  title = col_character())
+
+mainclass_current_tbl <- vroom(
+  file       = "00_data/04_patents/mainclass_current.tsv", 
+  delim      = "\t", 
+  col_names  = names(col_types),
+  col_types  = col_types,
+  na         = c("", "NA", "NULL")
+)
+setDT(mainclass_current_tbl)
+
+# Change of column names to avoid misalignment
+
+setnames(patent_assignee_tbl, "assignee_id", "id")
+setnames(patent_tbl, "id", "patent_id")
+setnames(mainclass_current_tbl, "id", "mainclass_id")
+
+# Joining tables -----
+# Combine assignee_tbl with patent_assignee_tbl
+combined_patent_patent_assignee_tbl <- merge(x = assignee_tbl, y = patent_assignee_tbl, 
+                       by    = "id", 
+                       all.x = TRUE, 
+                       all.y = FALSE)
+setDT(combined_patent_patent_assignee_tbl)
+rm(assignee_tbl, patent_assignee_tbl)
+gc()
+
+# Combine result with patent_tbl
+combined_patent_patent_assignee_patent_tbl <- merge(x = combined_patent_patent_assignee_tbl, y = patent_tbl, 
+                                             by    = "patent_id", 
+                                             all.x = TRUE, 
+                                             all.y = FALSE)
+setDT(combined_patent_patent_assignee_patent_tbl)
+rm(combined_patent_patent_assignee_tbl, patent_tbl)
+gc()
+
+# Combine result with uspc_tbl
+combined_patent_patent_assignee_patent_uspc_tbl <- merge(x = combined_patent_patent_assignee_patent_tbl, y = uspc_tbl, 
+                                                    by    = "patent_id", 
+                                                    all.x = TRUE, 
+                                                    all.y = FALSE)
+setDT(combined_patent_patent_assignee_patent_uspc_tbl)
+rm(combined_patent_patent_assignee_patent_tbl, uspc_tbl)
+gc()
+
+# Combine result with mainclass_current_tbl
+combined_patent_data_tbl <- merge(x = combined_patent_patent_assignee_patent_uspc_tbl, y = mainclass_current_tbl, 
+                                                         by    = "mainclass_id", 
+                                                         all.x = TRUE, 
+                                                         all.y = FALSE)
+setDT(combined_patent_data_tbl)
+rm(combined_patent_patent_assignee_patent_uspc_tbl, mainclass_current_tbl)
+gc()
+
+# Preparing the data table  -----
+
+setkey(combined_patent_data_tbl, "organization", "date", "mainclass_id")
+key(combined_patent_data_tbl)
+
+?setorder()
+setorderv(combined_patent_data_tbl, c("organization", "date", "mainclass_id"))
+
+# 1 - Top 10 US organizations with the most patents -----
+combined_patent_data_tbl %>%
+  group_by(id)%>%
+  filter(!is.na(organization))%>%
+  count(organization, sort = TRUE)%>%
+  head(n = 10)
+
+# 2 - Top 10 US organizations with the most patents in 2019 ----
+combined_patent_data_tbl %>%
+  group_by(id)%>%
+  filter(!is.na(organization))%>%
+  filter(year(date) == 2019)%>%
+  count(organization, sort = TRUE)%>%
+  head(n = 10)
+
+# 3 - Top 5 USPTO Classes of top 10 organizations ----
+combined_patent_data_tbl %>%
+  select(id, organization, mainclass_id, title)%>%
+  group_by(id)%>%
+  filter(!is.na(organization))%>%
+  filter(!is.na(mainclass_id))%>%
+  filter(title != "DOES NOT EXIST") %>%
+  filter(title != "unclassified") %>%
+  count(organization, title, sort = TRUE)%>%
+  head(n = 10)
+```
+
+# Data Visualization of COVID Data - Session 5 - Data Visualization
+```{r}
+library(tidyverse)
+library(lubridate)
+library(maps)
+library(scales)
+
+covid_data_tbl <- read_csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv")
+
+# Challenge 1 -----------------
+# Format data ----
+cumulative_cases_by_day_tbl <- covid_data_tbl %>%
+  select(dateRep, cases, countriesAndTerritories) %>%
+  filter(countriesAndTerritories %in% c("Germany","United_Kingdom", "France", "Spain", "United_States_of_America")) %>%
+
+  # Grouping by country & date, and cumulatively summarize number of cases
+  group_by(countriesAndTerritories) %>%
+  mutate(dateRep = as.Date(dateRep, "%d/%m/%Y")) %>%
+  arrange(dateRep) %>%
+  mutate(cumulative_cases = cumsum(cases)) %>%
+  ungroup()
+
+#cumulative_cases_by_day_tbl
+
+# Plot ----
+cumulative_cases_by_day_tbl %>%
+  ggplot(aes(x = dateRep, y = cumulative_cases, color = countriesAndTerritories)) +
+  geom_line(size = 1) +
+  scale_color_brewer(palette = "Accent") +
+  labs(
+    title = "COVID-19 confirmed cases worldwide",
+    subtitle = "As of 11/2020",
+    x = "Year 2020",
+    y = "Confirmed CoVID-19 cases",
+    color = "Country"
+  ) +
+  theme_gray() +
+  theme(legend.position  = "right",
+        legend.direction = "vertical",
+        plot.title = element_text(face = "bold"),
+        axis.text.x = element_text(angle = 45)) +
+  scale_x_date(
+    date_breaks = "1 month", date_labels = "%B",
+    date_minor_breaks = "1 month"
+  ) +
+  scale_y_continuous(
+    breaks = seq(0, 15000000, by = 2500000),
+    labels = scales::label_number_si(accuracy = 0.1),
+    minor_breaks = seq(0, 10000000, by = 1250000)
+  )
+
+# Challenge 2 ----------
+world <- map_data("world")
+cumulative_deaths_per_country_tbl <- covid_data_tbl %>%
+  select(popData2019, deaths, countriesAndTerritories) %>%
+  group_by(countriesAndTerritories) %>% 
+  summarise(total_deaths = sum(deaths), population_2019 = median(popData2019)) %>%
+  ungroup() %>%
+  mutate(across(countriesAndTerritories, str_replace_all, "_", " ")) %>%
+  mutate(countriesAndTerritories = case_when(
+    countriesAndTerritories == "United Kingdom" ~ "UK",
+    countriesAndTerritories == "United States of America" ~ "USA",
+    countriesAndTerritories == "Czechia" ~ "Czech Republic",
+    TRUE ~ countriesAndTerritories
+  )) %>%
+  mutate (mortality_rate = total_deaths/population_2019) %>%
+  rename("region" = "countriesAndTerritories")
+
+world_mortality_rate_covid <- left_join(world, cumulative_deaths_per_country_tbl)
+# 
+ggplot(world_mortality_rate_covid) +
+  geom_map(aes(map_id = region, fill = mortality_rate), map = world_mortality_rate_covid, data = world_mortality_rate_covid) +
+  expand_limits(x = world_mortality_rate_covid$long, y = world_mortality_rate_covid$lat) +
+  labs(
+        title = "Mortality rate of COVID-19 worldwide",
+        subtitle = "As of 11/2020",
+        x = NULL,
+        y = NULL,
+        fill = "Mortality Rate"
+      ) +
+  theme(
+    axis.text = element_blank(),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    panel.border = element_blank(),
+    panel.grid = element_blank(),
+    axis.title = element_blank()
+  ) +
+  scale_fill_gradient(
+    low = "#D80000",
+    high = "#3F0000",
+    space = "Lab",
+    na.value = "grey50",
+    guide = "colourbar",
+    aesthetics = "fill",
+    breaks = seq(0.0000, 0.0012, by=0.0003), 
+    labels = scales::percent_format(accuracy = 0.001)
+    )
+```

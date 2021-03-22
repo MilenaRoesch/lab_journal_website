@@ -1,0 +1,1672 @@
+---
+title: "Machine Learning"
+author: "Milena Roesch"
+date: "21 3 2021"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    collapsed: false
+    number_sections: true
+    toc_depth: 3
+    #code_folding: hide
+---
+
+<style>
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    background-color: #2DC6D6;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=FALSE,warning=FALSE, cache=TRUE, cache.lazy = FALSE)
+```
+2020 | 9 | 3 Last compiled: `r Sys.Date()`
+
+# Stock Data - Session 6 - Machine Learning Fundamentals
+```{r}
+# Libraries
+
+library(tidyverse)
+library(tidyquant)
+library(broom)
+library(umap)
+library(plotly)
+library(ggrepel)
+library(ggthemes)
+
+# Load information ----
+# STOCK PRICES
+sp_500_prices_tbl <- read_rds("00_data/06_challenge/sp_500_prices_tbl.rds") %>%
+  select("symbol", "date", "adjusted")
+# SECTOR INFORMATION
+sp_500_index_tbl <- read_rds("00_data/06_challenge/sp_500_index_tbl.rds") %>%
+  select("company", "symbol", "sector")
+# DAILY RETURNS
+sp_500_daily_returns_tbl <- sp_500_prices_tbl %>%
+  mutate(date = as.Date(date, "%Y-%M-%D")) %>%
+  filter(date >= as.Date("2017-12-31")) %>%
+  group_by(symbol) %>%
+  mutate(previous_adjusted = lag(adjusted, n=1)) %>%
+  filter(!is.na(previous_adjusted)) %>%
+  mutate(pct_return = (adjusted - previous_adjusted)/previous_adjusted) %>%
+  ungroup() %>%
+  select("symbol", "date", "pct_return")
+
+stock_date_matrix_tbl <- sp_500_daily_returns_tbl %>%
+  pivot_wider(
+    names_from = "date",
+    values_from = "pct_return",
+    values_fill = 0
+  )
+
+ 
+kmeans_mapper <- function(center) {
+  stock_date_matrix_tbl %>%
+    select(-symbol) %>%
+    kmeans(centers = center, nstart = 20)
+}
+
+
+k_means_mapped_tbl <- tibble(centers = 1:30) %>%
+  mutate(k_means = map(centers, kmeans_mapper)) %>%
+  mutate(glance = map(k_means, glance))
+
+
+# Visualize Scree Plot ----
+k_means_mapped_tbl %>%
+  unnest(glance) %>%
+  select(centers, tot.withinss) %>%
+  ggplot(aes(centers, tot.withinss)) +
+  geom_point(color = "#2DC6D6", size = 4) +
+  geom_line(color = "#2DC6D6", size = 1) +
+  ggrepel::geom_label_repel(aes(label = centers), color = "#2DC6D6") +
+  labs(
+    title = "Scree Plot"
+  )
+# Visualization: UMAP ------
+umap_results <- stock_date_matrix_tbl %>%
+  select(-symbol) %>%
+  umap()
+
+# Convert umap results to tibble with symbols
+umap_results_tbl <- umap_results$layout %>%
+  as_tibble() %>%
+  bind_cols(
+    stock_date_matrix_tbl %>% select(symbol)
+  )
+
+# Visualize UMAP results
+k_means_mapped_official_tbl <- read_rds("00_data/06_challenge/k_means_mapped_tbl.rds")
+umap_results_official_tbl   <- read_rds("00_data/06_challenge/umap_results_tbl.rds")
+
+umap_results_official_tbl %>%
+  ggplot(aes(V1, V2)) + 
+  geom_point(alpha=0.5) + 
+  theme_tq() +
+  labs(
+    title = "UMAP Projection"
+  )
+
+# Combine K-means and UMAP ----
+k_means_obj <- k_means_mapped_official_tbl %>%
+  filter(centers == 10) %>%
+  pull(k_means) %>%
+  pluck(1)
+
+umap_kmeans_results_tbl <- k_means_obj %>% 
+  augment(stock_date_matrix_tbl) %>%
+  select(symbol, .cluster) %>%
+  left_join(umap_results_official_tbl, by = "symbol") %>%
+  left_join((sp_500_index_tbl %>% select(symbol, company, sector)), by = "symbol")
+
+# visualize combined k-means and umap results ----
+ggplot(umap_kmeans_results_tbl, aes(V1, V2, color = .cluster)) +
+  geom_point(
+    na.rm = TRUE,
+    alpha = 1/2
+    ) +
+  labs(
+    title = "Visualization of k_means and UMAP results combined"
+  ) +
+  theme(legend.position = "none", 
+  )
+```
+
+# Using a Recipe for the previous Business Case Analysis on Product Gaps and Pricing of our Bike Data - Session 7 & 8 - Supervised ML - Regression
+```{r}
+# Standard
+library(tidyverse)
+library(dplyr)
+
+# Modeling
+library(parsnip)
+
+# Preprocessing & Sampling
+library(recipes)
+library(rsample)
+
+# Workflows
+library(workflows)
+
+# Modeling Error Metrics
+library(yardstick)
+
+# Plotting Decision Trees
+library(rpart.plot)
+
+# Modeling ----------------------------------------------------------------
+bike_orderlines_tbl <- readRDS("00_data/01_bike_sales/02_wrangled_data/bike_orderlines.rds")
+
+model_sales_tbl <- bike_orderlines_tbl %>%
+  select(total_price, model, category_2, frame_material) %>%
+
+  group_by(model, category_2, frame_material) %>%
+  summarise(total_sales = sum(total_price)) %>%
+  ungroup() %>%
+
+  arrange(desc(total_sales))
+
+model_sales_tbl %>%
+  mutate(category_2 = as_factor(category_2) %>%
+           fct_reorder(total_sales, .fun = max) %>%
+           fct_rev()) %>%
+  ggplot(aes(frame_material, total_sales)) +
+  geom_violin() +
+  geom_jitter(width = 0.1, alpha = 0.5, color = "#2c3e50") +
+  #coord_flip() +
+  facet_wrap(~ category_2) +
+  scale_y_continuous(labels = scales::dollar_format(scale = 1e-6, suffix = "M", accuracy = 0.1)) +
+  tidyquant::theme_tq() +
+  labs(
+    title = "Total Sales for Each Model",
+    x = "Frame Material", y = "Revenue"
+  )
+
+bike_features_tbl <- readRDS("00_data/01_bike_sales/02_wrangled_data/bike_features_tbl.rds")
+names(bike_features_tbl) <- str_replace_all(names(bike_features_tbl), c(" " = "_" , "," = "" ))
+
+
+# Set Shift Lever as alternative input if Rear Derailleur is na
+bike_features_tbl$Rear_Derailleur[is.na(bike_features_tbl$Rear_Derailleur)] <- bike_features_tbl$Shift_Lever[is.na(bike_features_tbl$Rear_Derailleur)]
+bike_features_tbl <- bike_features_tbl %>% 
+  rename(Rear_Derailleur_Shift_Lever = Rear_Derailleur) %>%
+  drop_na(Rear_Derailleur_Shift_Lever) %>%
+  mutate(id = row_number()) 
+
+
+# Splitting Data ----
+set.seed(seed = 1113)
+split_obj <- rsample::initial_split(bike_features_tbl, prop   = 0.80, 
+                                    strata = "category_2")
+
+# Check if testing contains all category_2 values
+split_obj %>% training() %>% distinct(category_2)
+split_obj %>% testing() %>% distinct(category_2)
+
+# Assign training and test data
+train_tbl <- training(split_obj)
+test_tbl  <- testing(split_obj)
+
+# Recipe
+bike_features_rec <- 
+  recipe( ~ ., data = train_tbl) %>%
+  step_rm(all_predictors(), - Rear_Derailleur_Shift_Lever) %>% 
+  step_dummy(all_nominal(), - all_outcomes()) %>%
+  prep()
+
+bike_transformed_tbl <- bake(bike_features_rec, new_data = NULL)
+
+# Continue by putting in a workflow, test, etc. --> NOT PROCESSED THROUGH HERE
+```
+
+# Employee Attrition - Session 9 - Automated Machine Learning with H20 (I)
+```{r}
+# Standard
+library(tidyverse)
+library(readxl)
+library(skimr)
+library(GGally)
+
+
+#Load data
+employee_attrition_tbl <- read_csv("./00_data/09_automated_ML_h2o/datasets-1067-1925-WA_Fn-UseC_-HR-Employee-Attrition.csv")
+
+dept_job_role_tbl <- employee_attrition_tbl %>%
+  select(EmployeeNumber, Department, JobRole, PerformanceRating, Attrition)
+
+# Business & Data Understanding: Department and Job Role ----
+# Data subset
+dept_job_role_tbl %>%
+  group_by(Department, JobRole, Attrition)
+
+# Function to convert counts to percentages.
+count_to_pct <- function(data, ..., col = n) {
+
+  # capture the dots
+  grouping_vars_expr <- quos(...)
+  col_expr <- enquo(col)
+
+  ret <- data %>%
+    group_by(!!! grouping_vars_expr) %>%
+    mutate(pct = (!! col_expr) / sum(!! col_expr)) %>%
+    ungroup()
+
+  return(ret)
+
+}
+
+dept_job_role_tbl %>%
+  count(JobRole, Attrition) %>%
+  count_to_pct(JobRole)
+
+dept_job_role_tbl %>%
+  count(Department, JobRole, Attrition) %>%
+  count_to_pct(Department, JobRole)
+
+assess_attrition <- function(data, attrition_col, attrition_value, baseline_pct) {
+
+  attrition_col_expr <- enquo(attrition_col)
+
+  data %>%
+
+    # Use parenthesis () to give tidy eval evaluation priority
+    filter((!! attrition_col_expr) %in% attrition_value) %>%
+    arrange(desc(pct)) %>%
+    mutate(
+      # Function inputs in numeric format (e.g. baseline_pct = 0.088 don't require tidy eval)
+      above_industry_avg = case_when(
+        pct > baseline_pct ~ "Yes",
+        TRUE ~ "No"
+      )
+    )
+}
+
+
+# Attrition by job role
+source("./00_scripts/9_assess_attrition.R")
+
+# Function to calculate attrition cost ----
+calculate_attrition_cost <- function(
+  
+  # Employee
+  n                    = 1,
+  salary               = 80000,
+  
+  # Direct Costs
+  separation_cost      = 500,
+  vacancy_cost         = 10000,
+  acquisition_cost     = 4900,
+  placement_cost       = 3500,
+  
+  # Productivity Costs
+  net_revenue_per_employee = 250000,
+  workdays_per_year        = 240,
+  workdays_position_open   = 40,
+  workdays_onboarding      = 60,
+  onboarding_efficiency    = 0.50
+  
+) { 
+  # Direct Costs
+  direct_cost <- sum(separation_cost, vacancy_cost, acquisition_cost, placement_cost)
+  
+  # Lost Productivity Costs
+  productivity_cost <- net_revenue_per_employee / workdays_per_year *
+    (workdays_position_open + workdays_onboarding * onboarding_efficiency)
+  
+  # Savings of Salary & Benefits (Cost Reduction)
+  salary_benefit_reduction <- salary / workdays_per_year * workdays_position_open
+  
+  # Estimated Turnover Per Employee
+  cost_per_employee <- direct_cost + productivity_cost - salary_benefit_reduction
+  
+  # Total Cost of Employee Turnover
+  total_cost <- n * cost_per_employee
+  
+  return(total_cost)
+  
+}
+
+dept_job_role_tbl %>%
+  
+  count(Department, JobRole, Attrition) %>%
+  count_to_pct(Department, JobRole) %>%
+  assess_attrition(Attrition, attrition_value = "Yes", baseline_pct = 0.088) %>%
+  mutate(
+    cost_of_attrition = calculate_attrition_cost(n = n, salary = 80000)
+  )
+
+#Visualization ----
+# Function to plot attrition
+plot_attrition <- function(data, 
+                           ..., 
+                           .value,
+                           fct_reorder = TRUE,
+                           fct_rev     = FALSE,
+                           include_lbl = TRUE,
+                           color       = "#2dc6d6",
+                           units       = c("0", "K", "M")) {
+  
+  ### Inputs
+  group_vars_expr   <- quos(...)
+  
+  # If the user does not supply anything, 
+  # this takes the first column of the supplied data
+  if (length(group_vars_expr) == 0) {
+    group_vars_expr <- quos(rlang::sym(colnames(data)[[1]]))
+  }
+  
+  value_expr <- enquo(.value)
+  
+  units_val  <- switch(units[[1]],
+                       "M" = 1e6,
+                       "K" = 1e3,
+                       "0" = 1)
+  if (units[[1]] == "0") units <- ""
+  
+  # Data Manipulation
+  # This is a so called Function Factory (a function that produces a function)
+  usd <- scales::dollar_format(prefix = "$", largest_with_cents = 1e3)
+  
+  # Create the axis labels and values for the plot
+  data_manipulated <- data %>%
+    mutate(name = str_c(!!! group_vars_expr, sep = ": ") %>% as_factor()) %>%
+    mutate(value_text = str_c(usd(!! value_expr / units_val),
+                              units[[1]], sep = ""))
+  
+  
+  # Order the labels on the y-axis according to the input
+  if (fct_reorder) {
+    data_manipulated <- data_manipulated %>%
+      mutate(name = forcats::fct_reorder(name, !! value_expr)) %>%
+      arrange(name)
+  }
+  
+  if (fct_rev) {
+    data_manipulated <- data_manipulated %>%
+      mutate(name = forcats::fct_rev(name)) %>%
+      arrange(name)
+  }
+  
+  # Visualization
+  g <- data_manipulated %>%
+    
+    # "name" is a column name generated by our function internally as part of the data manipulation task
+    ggplot(aes(x = (!! value_expr), y = name)) +
+    geom_segment(aes(xend = 0, yend = name), color = color) +
+    geom_point(aes(size = !! value_expr), color = color) +
+    scale_x_continuous(labels = scales::dollar) +
+    scale_size(range = c(3, 5)) +
+    theme(legend.position = "none")
+  
+  # Plot labels if TRUE
+  if (include_lbl) {
+    g <- g +
+      geom_label(aes(label = value_text, size = !! value_expr),
+                 hjust = "inward", color = color)
+  }
+  
+  return(g)
+  
+}
+
+
+#Visualization
+dept_job_role_tbl %>%
+  
+  # Select columnns
+  count(Department, JobRole, Attrition) %>%
+  count_to_pct(Department, JobRole) %>%
+  
+  assess_attrition(Attrition, attrition_value = "Yes", baseline_pct = 0.088) %>%
+  mutate(
+    cost_of_attrition = calculate_attrition_cost(n = n, salary = 80000)
+  ) %>%
+  
+  # Select columnns
+  plot_attrition(Department, JobRole, .value = cost_of_attrition,
+                 units = "M") +
+  labs(
+    title = "Estimated Cost of Attrition by Job Role",
+    x = "Cost of Attrition",
+    subtitle = "Looks like Sales Executive and Labaratory Technician are the biggest drivers of cost"
+  )
+
+# Data understanding -----
+path_data_definitions <- "./00_data/09_automated_ML_h2o/data_definitions.xlsx"
+definitions_raw_tbl   <- read_excel(path_data_definitions, sheet = 1, col_names = FALSE)
+
+# Descriptive Features
+employee_attrition_tbl %>% select(Age, DistanceFromHome, Gender, MaritalStatus, NumCompaniesWorked, Over18)
+
+# Employment Features
+employee_attrition_tbl %>% select(Department, EmployeeCount, EmployeeNumber, JobInvolvement, JobLevel, JobRole, JobSatisfaction)
+
+# Compensation Features
+employee_attrition_tbl %>% select(DailyRate, HourlyRate, MonthlyIncome, MonthlyRate, PercentSalaryHike, StockOptionLevel)
+
+# Survery Results
+employee_attrition_tbl %>% select(EnvironmentSatisfaction, JobSatisfaction, RelationshipSatisfaction, WorkLifeBalance)
+
+# Performance Data
+employee_attrition_tbl %>% select(JobInvolvement, PerformanceRating)
+
+# Work-Life Features
+employee_attrition_tbl %>% select(BusinessTravel, OverTime)
+
+# Training & Education
+employee_attrition_tbl %>% select(Education, EducationField, TrainingTimesLastYear)
+
+# Time-Based Features
+employee_attrition_tbl %>% select(TotalWorkingYears, YearsAtCompany, YearsInCurrentRole, YearsSinceLastPromotion, YearsWithCurrManager)
+
+
+# Step 1: Data Summarization -----
+
+skim(employee_attrition_tbl)
+
+# Character Data Type
+employee_attrition_tbl %>%
+  select_if(is.character) %>%
+  glimpse()
+
+# Get "levels"
+employee_attrition_tbl %>%
+  select_if(is.character) %>%
+  map(unique)
+
+# Proportions    
+employee_attrition_tbl %>%
+  select_if(is.character) %>%
+  map(~ table(.) %>% prop.table())
+
+# Numeric Data
+employee_attrition_tbl %>%
+  select_if(is.numeric) %>%
+  map(~ unique(.) %>% length())
+
+employee_attrition_tbl %>%
+  select_if(is.numeric) %>%
+  map_df(~ unique(.) %>% length()) %>%
+  # Select all columns
+  pivot_longer(everything()) %>%
+  arrange(value) %>%
+  filter(value <= 10)
+
+# Step 2: Data Visualization ----
+employee_attrition_tbl %>%
+  select(Attrition, Age, Gender, MaritalStatus, NumCompaniesWorked, Over18, DistanceFromHome) %>%
+  ggpairs(aes(color = Attrition), lower = "blank", legend = 1,
+          diag  = list(continuous = wrap("densityDiag", alpha = 0.5))) +
+  theme(legend.position = "bottom")
+
+# Create data tibble, to potentially debug the plot_ggpairs function (because it has a data argument)
+data <- employee_attrition_tbl %>%
+  select(Attrition, Age, Gender, MaritalStatus, NumCompaniesWorked, Over18, DistanceFromHome)
+
+plot_ggpairs <- function(data, color = NULL, density_alpha = 0.5) {
+  
+  color_expr <- enquo(color)
+  
+  if (rlang::quo_is_null(color_expr)) {
+    
+    g <- data %>%
+      ggpairs(lower = "blank") 
+    
+  } else {
+    
+    color_name <- quo_name(color_expr)
+    
+    g <- data %>%
+      ggpairs(mapping = aes_string(color = color_name), 
+              lower = "blank", legend = 1,
+              diag = list(continuous = wrap("densityDiag", 
+                                            alpha = density_alpha))) +
+      theme(legend.position = "bottom")
+  }
+  
+  return(g)
+  
+}
+
+employee_attrition_tbl %>%
+  select(Attrition, Age, Gender, MaritalStatus, NumCompaniesWorked, Over18, DistanceFromHome) %>%
+  plot_ggpairs(color = Attrition)
+
+
+# Explore Features by Category
+
+#   1. Descriptive features: age, gender, marital status
+employee_attrition_tbl %>%
+  select(Attrition, Age, Gender, MaritalStatus, NumCompaniesWorked, Over18, DistanceFromHome) %>%
+  plot_ggpairs(Attrition)
+
+#   2. Employment features: department, job role, job level
+employee_attrition_tbl %>%
+  select(Attrition, contains("employee"), contains("department"), contains("job")) %>%
+  plot_ggpairs(Attrition)
+
+#   3. Compensation features: HourlyRate, MonthlyIncome, StockOptionLevel
+employee_attrition_tbl %>%
+  select(Attrition, contains("income"), contains("rate"), contains("salary"), contains("stock")) %>%
+  plot_ggpairs(Attrition)
+
+#   4. Survey Results: Satisfaction level, WorkLifeBalance
+employee_attrition_tbl %>%
+  select(Attrition, contains("satisfaction"), contains("life")) %>%
+  plot_ggpairs(Attrition)
+
+#   5. Performance Data: Job Involvment, Performance Rating
+employee_attrition_tbl %>%
+  select(Attrition, contains("performance"), contains("involvement")) %>%
+  plot_ggpairs(Attrition)
+
+#   6. Work-Life Features
+employee_attrition_tbl %>%
+  select(Attrition, contains("overtime"), contains("travel")) %>%
+  plot_ggpairs(Attrition)
+
+#   7. Training and Education
+employee_attrition_tbl %>%
+  select(Attrition, contains("training"), contains("education")) %>%
+  plot_ggpairs(Attrition)
+
+#   8. Time-Based Features: Years at company, years in current role
+employee_attrition_tbl %>%
+  select(Attrition, contains("years")) %>%
+  plot_ggpairs(Attrition)
+
+# 1. Compensation Features What can you deduce about the interaction between Monthly Income and Attrition?
+#   c. Those that are leaving have a lower Monthly Income
+# 2. Compensation Features What can you deduce about the interaction between Percent Salary Hike and Attrition?
+#   d. Itâs difficult to deduce anything based on the visualization
+# 3. Compensation Features What can you deduce about the interaction between Stock Option Level and Attrition?
+#   b. Those that are staying have a higher stock option level
+# 4. Survey Results What can you deduce about the interaction between Environment Satisfaction and Attrition?
+#   a. A higher proportion of those leaving have a low environment satisfaction level
+# 5. Survey Results What can you deduce about the interaction between Work Life Balance and Attrition?
+#   b. Those that are staying have a higher density of 2âs and 3âs
+# 6. Performance Data What Can you deduce about the interaction between Job Involvement and Attrition?
+#   a. Those that are leaving have a lower density of 3âs and 4âs
+# 7. Work-Life Features What can you deduce about the interaction between Over Time and Attrition?
+#   a. The proportion of those leaving that are working Over Time are high compared to those that are not leaving
+# 8. Training and Education What can you deduce about the interaction between Training Times Last Year and Attrition
+#   b. People that leave tend to have less annual trainings
+# 9. Time-Based Features What can you deduce about the interaction between Years At Company and Attrition
+#   b. People that leave tend to have less working years at the company
+# 10. Time-Based Features What can you deduce about the interaction between Years Since Last Promotion and Attrition?
+#   c. Itâs difficult to deduce anything based on the visualization
+
+```
+
+# Business Case on Employee Attrition and Product Backorders Challenge - Session 10 - Automated Machine Learning with H20 (II)
+## Business Case
+```{r}
+# Load data
+library(tidyverse)
+library(readxl)
+library(rsample)
+library(recipes)
+library(PerformanceAnalytics)  
+library(h2o)
+
+process_hr_data_readable <- function(data, definitions_tbl) {
+  
+  definitions_list <- definitions_tbl %>%
+    fill(...1, .direction = "down") %>%
+    filter(!is.na(...2)) %>%
+    separate(...2, into = c("key", "value"), sep = " '", remove = TRUE) %>%
+    rename(column_name = ...1) %>%
+    mutate(key = as.numeric(key)) %>%
+    mutate(value = value %>% str_replace(pattern = "'", replacement = "")) %>%
+    split(.$column_name) %>%
+    map(~ select(., -column_name)) %>%
+    map(~ mutate(., value = as_factor(value))) 
+  
+  for (i in seq_along(definitions_list)) {
+    list_name <- names(definitions_list)[i]
+    colnames(definitions_list[[i]]) <- c(list_name, paste0(list_name, "_value"))
+  }
+  
+  data_merged_tbl <- list(HR_Data = data) %>%
+    append(definitions_list, after = 1) %>%
+    reduce(left_join) %>%
+    select(-one_of(names(definitions_list))) %>%
+    set_names(str_replace_all(names(.), pattern = "_value", 
+                              replacement = "")) %>%
+    select(sort(names(.))) %>%
+    mutate_if(is.character, as.factor) %>%
+    mutate(
+      BusinessTravel = BusinessTravel %>% fct_relevel("Non-Travel", 
+                                                      "Travel_Rarely", 
+                                                      "Travel_Frequently"),
+      MaritalStatus  = MaritalStatus %>% fct_relevel("Single", 
+                                                     "Married", 
+                                                     "Divorced")
+    )
+  
+  return(data_merged_tbl)
+  
+}
+
+
+# H2O Modelling
+
+employee_attrition_tbl          <- read_csv("./00_data/09_automated_ML_h2o/datasets-1067-1925-WA_Fn-UseC_-HR-Employee-Attrition.csv")
+definitions_raw_tbl             <- read_excel("./00_data/09_automated_ML_h2o/data_definitions.xlsx", sheet = 1, col_names = FALSE)
+employee_attrition_readable_tbl <- process_hr_data_readable(employee_attrition_tbl, definitions_raw_tbl)
+set.seed(seed = 1113)
+split_obj                       <- rsample::initial_split(employee_attrition_readable_tbl, prop = 0.85)
+train_readable_tbl              <- training(split_obj)
+test_readable_tbl               <- testing(split_obj)
+
+recipe_obj <- recipe(Attrition ~., data = train_readable_tbl) %>% 
+  step_zv(all_predictors()) %>% 
+  step_mutate_at(JobLevel, StockOptionLevel, fn = as.factor) %>% 
+  prep()
+
+train_tbl <- bake(recipe_obj, new_data = train_readable_tbl)
+test_tbl  <- bake(recipe_obj, new_data = test_readable_tbl)
+
+# Modeling
+h2o.init()
+
+# Split data into a training and a validation data frame
+# Setting the seed is just for reproducability
+split_h2o <- h2o.splitFrame(as.h2o(train_tbl), ratios = c(0.85), seed = 1234)
+train_h2o <- split_h2o[[1]]
+valid_h2o <- split_h2o[[2]]
+test_h2o  <- as.h2o(test_tbl)
+
+# Set the target and predictors
+y <- "Attrition"
+x <- setdiff(names(train_h2o), y)
+
+
+automl_models_h2o <- h2o.automl(
+  x = x,
+  y = y,
+  training_frame    = train_h2o,
+  validation_frame  = valid_h2o,
+  leaderboard_frame = test_h2o,
+  max_runtime_secs  = 30,
+  nfolds            = 5 
+)
+
+typeof(automl_models_h2o)
+slotNames(automl_models_h2o)
+automl_models_h2o@leaderboard
+automl_models_h2o@leader
+
+# Extracts and H2O model name by a position so can more easily use h2o.getModel()
+extract_h2o_model_name_by_position <- function(h2o_leaderboard, n = 1, verbose = T) {
+  
+  model_name <- h2o_leaderboard %>%
+    as.tibble() %>%
+    slice(n) %>%
+    pull(model_id)
+  
+  if (verbose) message(model_name)
+  
+  return(model_name)
+  
+}
+
+automl_models_h2o@leaderboard %>% 
+  extract_h2o_model_name_by_position(6) %>% 
+  h2o.getModel()
+
+```
+
+## Challenge
+```{r}
+library(h2o)
+library(tidyverse)
+library(readxl)
+library(rsample)
+library(recipes)
+library(PerformanceAnalytics)
+
+# Load data
+product_backorders_tbl          <- read_csv("./00_data/10_automated_ML_h2o_II/product_backorders.csv")
+
+# Split data into test and train data
+set.seed(seed = 1113)
+split_obj                       <- rsample::initial_split(product_backorders_tbl, prop = 0.85)
+train_readable_tbl              <- training(split_obj)
+test_readable_tbl               <- testing(split_obj)
+
+# Recipe
+recipe_obj <- recipe(went_on_backorder ~., data = train_readable_tbl) %>% 
+  step_zv(all_predictors()) %>% 
+  prep()
+
+# Bake Recipe
+train_tbl <- bake(recipe_obj, new_data = train_readable_tbl)
+test_tbl  <- bake(recipe_obj, new_data = test_readable_tbl)
+
+# Modeling
+h2o.init()
+
+# Split data into a training and a validation data frame
+# Setting the seed is just for reproducability
+split_h2o <- h2o.splitFrame(as.h2o(train_tbl), ratios = c(0.85), seed = 1234)
+train_h2o <- split_h2o[[1]]
+valid_h2o <- split_h2o[[2]]
+test_h2o  <- as.h2o(test_tbl)
+
+# Set the target and predictors
+y <- "went_on_backorder"
+x <- setdiff(names(train_h2o), y)
+
+automl_models_h2o <- h2o.automl(
+  x = x,
+  y = y,
+  training_frame    = train_h2o,
+  validation_frame  = valid_h2o,
+  leaderboard_frame = test_h2o,
+  max_runtime_secs  = 30,
+  nfolds            = 5 
+)
+
+typeof(automl_models_h2o)
+
+slotNames(automl_models_h2o)
+
+automl_models_h2o@leaderboard
+
+# Depending on the algorithm, the output will be different
+#h2o.getModel("StackedEnsemble_AllModels_AutoML_20210129_132920")
+
+# Extracts and H2O model name by a position so can more easily use h2o.getModel()
+extract_h2o_model_name_by_position <- function(h2o_leaderboard, n = 1, verbose = T) {
+  
+  model_name <- h2o_leaderboard %>%
+    as_tibble() %>%
+    slice(n) %>%
+    pull(model_id)
+  
+  if (verbose) message(model_name)
+  
+  return(model_name)
+  
+}
+
+automl_models_h2o@leaderboard %>% 
+  extract_h2o_model_name_by_position(6) %>% 
+  h2o.getModel()
+
+#Save model
+# h2o.getModel("StackedEnsemble_AllModels_AutoML_20210129_132920") %>%
+#   h2o.saveModel(path = "04_model/h2o_models/")
+
+h2o.loadModel("04_Model/h2o_models/StackedEnsemble_AllModels_AutoML_20210129_132920")
+stacked_ensemble_h2o <- h2o.loadModel("04_model/h2o_models/StackedEnsemble_AllModels_AutoML_20210129_132920")
+stacked_ensemble_h2o
+
+predictions <- h2o.predict(stacked_ensemble_h2o, newdata = as.h2o(test_tbl))
+
+typeof(predictions)
+
+predictions_tbl <- predictions %>% as_tibble()
+
+deep_learning_h2o <- h2o.loadModel("04_model/h2o_models/StackedEnsemble_AllModels_AutoML_20210129_132920")
+deep_learning_h2o@allparameters
+```
+
+# Applying a Performance Analysis on the previous Product Backorders Challenge - Session 11 - Performance Measures
+```{r}
+library(h2o)
+library(tidyverse)
+library(readxl)
+library(rsample)
+library(recipes)
+library(PerformanceAnalytics)
+library(cowplot)
+library(glue)
+library(purrr)
+
+#From last session -----
+# Load data
+product_backorders_tbl          <- read_csv("./00_data/10_automated_ML_h2o_II/product_backorders.csv")
+
+# Split data into test and train data
+set.seed(seed = 1113)
+split_obj                       <- rsample::initial_split(product_backorders_tbl, prop = 0.85)
+train_readable_tbl              <- training(split_obj)
+test_readable_tbl               <- testing(split_obj)
+
+# Recipe
+recipe_obj <- recipe(went_on_backorder ~., data = train_readable_tbl) %>% 
+  step_zv(all_predictors()) %>% 
+  prep()
+
+# Bake Recipe
+train_tbl <- bake(recipe_obj, new_data = train_readable_tbl)
+test_tbl  <- bake(recipe_obj, new_data = test_readable_tbl)
+
+# Modeling
+h2o.init()
+
+# Split data into a training and a validation data frame
+# Setting the seed is just for reproducability
+split_h2o <- h2o.splitFrame(as.h2o(train_tbl), ratios = c(0.85), seed = 1234)
+train_h2o <- split_h2o[[1]]
+valid_h2o <- split_h2o[[2]]
+test_h2o  <- as.h2o(test_tbl)
+
+# Set the target and predictors
+y <- "went_on_backorder"
+x <- setdiff(names(train_h2o), y)
+
+automl_models_h2o <- h2o.automl(
+  x = x,
+  y = y,
+  training_frame    = train_h2o,
+  validation_frame  = valid_h2o,
+  leaderboard_frame = test_h2o,
+  max_runtime_secs  = 30,
+  nfolds            = 5 
+)
+
+typeof(automl_models_h2o)
+
+slotNames(automl_models_h2o)
+
+automl_models_h2o@leaderboard
+
+# Depending on the algorithm, the output will be different
+automl_models_h2o@leaderboard %>% 
+  as_tibble() %>% 
+  select(-c(mean_per_class_error, rmse, mse))
+
+# Save models
+# h2o.getModel("StackedEnsemble_AllModels_AutoML_20210129_162602") %>% 
+#   h2o.saveModel(path = "04_model/h2o_models/")
+# h2o.getModel("DeepLearning_1_AutoML_20210129_162602") %>% 
+#   h2o.saveModel(path = "04_model/h2o_models/")
+
+# Visualization of the H2O Leaderboard to help model selection ----
+data_transformed_tbl <- automl_models_h2o@leaderboard %>%
+  as_tibble() %>%
+  select(-c(aucpr, mean_per_class_error, rmse, mse)) %>% 
+  mutate(model_type = str_extract(model_id, "[^_]+")) %>%
+  slice(1:15) %>% 
+  rownames_to_column(var = "rowname") %>%
+  # Visually this step will not change anything
+  # It reorders the factors under the hood
+  mutate(
+    model_id   = as_factor(model_id) %>% reorder(auc),
+    model_type = as.factor(model_type)
+  ) %>% 
+  pivot_longer(cols = -c(model_id, model_type, rowname), 
+               names_to = "key", 
+               values_to = "value", 
+               names_transform = list(key = forcats::fct_inorder)
+  ) %>% 
+  mutate(model_id = paste0(rowname, ". ", model_id) %>% as_factor() %>% fct_rev())
+
+data_transformed_tbl %>%
+  ggplot(aes(value, model_id, color = model_type)) +
+  geom_point(size = 3) +
+  geom_label(aes(label = round(value, 2), hjust = "inward")) +
+  
+  # Facet to break out logloss and auc
+  facet_wrap(~ key, scales = "free_x") +
+  labs(title = "Leaderboard Metrics",
+       subtitle = paste0("Ordered by: ", "auc"),
+       y = "Model Postion, Model ID", x = "") + 
+  theme(legend.position = "bottom")
+
+plot_h2o_leaderboard <- function(h2o_leaderboard, order_by = c("auc", "logloss"), 
+                                 n_max = 20, size = 4, include_lbl = TRUE) {
+  
+  # Setup inputs
+  # adjust input so that all formats are working
+  order_by <- tolower(order_by[[1]])
+  
+  leaderboard_tbl <- h2o_leaderboard %>%
+    as.tibble() %>%
+    select(-c(aucpr, mean_per_class_error, rmse, mse)) %>% 
+    mutate(model_type = str_extract(model_id, "[^_]+")) %>%
+    rownames_to_column(var = "rowname") %>%
+    mutate(model_id = paste0(rowname, ". ", model_id) %>% as.factor())
+  
+  # Transformation
+  if (order_by == "auc") {
+    
+    data_transformed_tbl <- leaderboard_tbl %>%
+      slice(1:n_max) %>%
+      mutate(
+        model_id   = as_factor(model_id) %>% reorder(auc),
+        model_type = as.factor(model_type)
+      ) %>%
+      pivot_longer(cols = -c(model_id, model_type, rowname), 
+                   names_to = "key", 
+                   values_to = "value", 
+                   names_transform = list(key = forcats::fct_inorder)
+      )
+    
+  } else if (order_by == "logloss") {
+    
+    data_transformed_tbl <- leaderboard_tbl %>%
+      slice(1:n_max) %>%
+      mutate(
+        model_id   = as_factor(model_id) %>% reorder(logloss) %>% fct_rev(),
+        model_type = as.factor(model_type)
+      ) %>%
+      pivot_longer(cols = -c(model_id, model_type, rowname), 
+                   names_to = "key", 
+                   values_to = "value", 
+                   names_transform = list(key = forcats::fct_inorder)
+      )
+    
+  } else {
+    # If nothing is supplied
+    stop(paste0("order_by = '", order_by, "' is not a permitted option."))
+  }
+  
+  # Visualization of transformed data
+  g <- data_transformed_tbl %>%
+    ggplot(aes(value, model_id, color = model_type)) +
+    geom_point(size = size) +
+    facet_wrap(~ key, scales = "free_x") +
+    labs(title = "Leaderboard Metrics",
+         subtitle = paste0("Ordered by: ", toupper(order_by)),
+         y = "Model Postion, Model ID", x = "")
+  
+  if (include_lbl) g <- g + geom_label(aes(label = round(value, 2), 
+                                           hjust = "inward"))
+  
+  return(g)
+  
+}
+
+# Tune model with grid search ----
+deeplearning_h2o <- h2o.loadModel("04_model/h2o_models/DeepLearning_1_AutoML_20210129_162602")
+deeplearning_h2o
+
+# We want to see how it performs for the testing data frame
+test_tbl
+
+h2o.performance(deeplearning_h2o, newdata = as.h2o(test_tbl))
+
+
+# Visualize trade off btw precision, recall and optimal threshold
+deeplearning_grid_01 <- h2o.grid(
+  algorithm = "deeplearning",
+  grid_id = "deeplearning_grid_01",
+  x = x,
+  y = y,
+  training_frame   = train_h2o,
+  validation_frame = valid_h2o,
+  nfolds = 5,
+  
+  # Hyperparamters: Use deeplearning_h2o@allparameters to see all
+  hyper_params = list(
+    # Use some combinations (the first one was the original)
+    hidden = list(c(10, 10, 10), c(50, 20, 10), c(20, 20, 20)),
+    epochs = c(10, 50, 100)
+  )
+)
+
+deeplearning_grid_01
+
+h2o.getGrid(grid_id = "deeplearning_grid_01", sort_by = "auc", decreasing = TRUE)
+
+deeplearning_grid_01_model_1 <- h2o.getModel("DeepLearning_1_AutoML_20210129_162602")
+deeplearning_grid_01_model_1 %>% h2o.auc(train = T, valid = T, xval = T)
+
+# Run it on the test data
+deeplearning_grid_01_model_1 %>%
+  h2o.performance(newdata = as.h2o(test_tbl))
+
+# Assessing Performance -----
+stacked_ensemble_h2o <- h2o.loadModel("04_model/h2o_models/StackedEnsemble_AllModels_AutoML_20210129_162602")
+# Create a performance object
+performance_h2o <- h2o.performance(stacked_ensemble_h2o, newdata = as.h2o(test_tbl))
+
+typeof(performance_h2o)
+
+performance_h2o %>% slotNames()
+
+# We are focusing on the slot metrics. This slot contains all possible metrics
+performance_h2o@metrics
+# Classifier Summary Metrics
+h2o.auc(performance_h2o, train = T, valid = T, xval = T)
+h2o.auc(stacked_ensemble_h2o, train = T, valid = T, xval = T)
+h2o.giniCoef(performance_h2o)
+h2o.logloss(performance_h2o)
+h2o.confusionMatrix(stacked_ensemble_h2o)
+h2o.confusionMatrix(performance_h2o)
+
+performance_tbl <- performance_h2o %>%
+  h2o.metric() %>%
+  as.tibble() 
+
+performance_tbl %>% 
+  glimpse()
+
+theme_new <- theme(
+  legend.position  = "bottom",
+  legend.key       = element_blank(),
+  panel.background = element_rect(fill   = "transparent"),
+  panel.border     = element_rect(color = "black", fill = NA, size = 0.5),
+  panel.grid.major = element_line(color = "grey", size = 0.333)
+) 
+
+h2o.init()
+
+performance_tbl %>%
+  filter(f1 == max(f1))
+
+performance_tbl %>%
+  ggplot(aes(x = threshold)) +
+  geom_line(aes(y = precision), color = "pink", size = 1) +
+  geom_line(aes(y = recall), color = "purple", size = 1) +
+  
+  # Insert line where precision and recall are harmonically optimized
+  geom_vline(xintercept = h2o.find_threshold_by_max_metric(performance_h2o, "f1")) +
+  labs(title = "Precision vs Recall", y = "value") +
+  theme_new
+
+# ROC Plot ------
+path <- "StackedEnsemble_AllModels_AutoML_20210129_162602"
+
+load_model_performance_metrics <- function(path, test_tbl) {
+  
+  model_h2o <- h2o.loadModel(path)
+  perf_h2o  <- h2o.performance(model_h2o, newdata = as.h2o(test_tbl)) 
+  
+  perf_h2o %>%
+    h2o.metric() %>%
+    as_tibble() %>%
+    mutate(auc = h2o.auc(perf_h2o)) %>%
+    select(tpr, fpr, auc, precision, recall)
+  
+}
+
+model_metrics_tbl <- fs::dir_info(path = "04_model/h2o_models/") %>%
+  select(path) %>%
+  mutate(metrics = purrr::map(path, load_model_performance_metrics, test_tbl)) %>%
+  unnest(cols = metrics)
+
+model_metrics_tbl %>%
+  mutate(
+    # Extract the model names
+    path = str_split(path, pattern = "/", simplify = T)[,3] %>% as_factor(),
+    auc  = auc %>% round(3) %>% as.character() %>% as_factor()
+  ) %>%
+  ggplot(aes(fpr, tpr, color = path, linetype = auc)) +
+  geom_line(size = 1) +
+  # just for demonstration purposes
+  geom_abline(color = "purple", linetype = "dotted") +
+  theme_new +
+  theme(
+    legend.direction = "vertical",
+  ) +
+  labs(
+    title = "ROC Plot",
+    subtitle = "Performance of 3 Top Performing Models"
+  )
+
+# Precision vs Recall Plot----
+h2o.init()
+
+model_metrics_tbl %>%
+  mutate(
+    path = str_split(path, pattern = "/", simplify = T)[,3] %>% as_factor(),
+    auc  = auc %>% round(3) %>% as.character() %>% as_factor()
+  ) %>%
+  ggplot(aes(recall, precision, color = path, linetype = auc)) +
+  geom_line(size = 1) +
+  theme_new +
+  theme(
+    legend.direction = "vertical",
+  ) +
+  labs(
+    title = "Precision vs Recall Plot",
+    subtitle = "Performance of 3 Top Performing Models"
+  )
+
+# Gain and Lift
+# data from last session 
+stacked_ensemble_h2o <- h2o.loadModel("04_model/h2o_models/StackedEnsemble_AllModels_AutoML_20210129_132920")
+predictions <- h2o.predict(stacked_ensemble_h2o, newdata = as.h2o(test_tbl))
+
+typeof(predictions)
+
+predictions_tbl <- predictions %>% as_tibble()
+
+ranked_predictions_tbl <- predictions_tbl %>%
+  bind_cols(test_tbl) %>%
+  select(predict:Yes, went_on_backorder) %>%
+  # Sorting from highest to lowest class probability
+  arrange(desc(Yes))
+calculated_gain_lift_tbl <- ranked_predictions_tbl %>%
+  mutate(ntile = ntile(Yes, n = 10)) %>%
+  group_by(ntile) %>%
+  summarise(
+    cases = n(),
+    responses = sum(went_on_backorder == "Yes")
+  ) %>%
+  arrange(desc(ntile)) %>%
+  
+  # Add group numbers (opposite of ntile)
+  mutate(group = row_number()) %>%
+  select(group, cases, responses) %>%
+  
+  # Calculations
+  mutate(
+    cumulative_responses = cumsum(responses),
+    pct_responses        = responses / sum(responses),
+    gain                 = cumsum(pct_responses),
+    cumulative_pct_cases = cumsum(cases) / sum(cases),
+    lift                 = gain / cumulative_pct_cases,
+    gain_baseline        = cumulative_pct_cases,
+    lift_baseline        = gain_baseline / cumulative_pct_cases
+  )
+calculated_gain_lift_tbl 
+
+gain_lift_tbl <- performance_h2o %>%
+  h2o.gainsLift() %>%
+  as.tibble()
+gain_lift_tbl
+
+# Gain
+gain_transformed_tbl <- gain_lift_tbl %>% 
+  select(group, cumulative_data_fraction, cumulative_capture_rate, cumulative_lift) %>%
+  select(-contains("lift")) %>%
+  mutate(baseline = cumulative_data_fraction) %>%
+  rename(gain     = cumulative_capture_rate) %>%
+  # prepare the data for the plotting (for the color and group aesthetics)
+  pivot_longer(cols = c(gain, baseline), values_to = "value", names_to = "key")
+gain_transformed_tbl %>%
+  ggplot(aes(x = cumulative_data_fraction, y = value, color = key)) +
+  geom_line(size = 1.5) +
+  labs(
+    title = "Gain Chart",
+    x = "Cumulative Data Fraction",
+    y = "Gain"
+  ) +
+  theme_new
+
+# Lift 
+lift_transformed_tbl <- gain_lift_tbl %>% 
+  select(group, cumulative_data_fraction, cumulative_capture_rate, cumulative_lift) %>%
+  select(-contains("capture")) %>%
+  mutate(baseline = 1) %>%
+  rename(lift = cumulative_lift) %>%
+  pivot_longer(cols = c(lift, baseline), values_to = "value", names_to = "key")
+lift_transformed_tbl %>%
+  ggplot(aes(x = cumulative_data_fraction, y = value, color = key)) +
+  geom_line(size = 1.5) +
+  labs(
+    title = "Lift Chart",
+    x = "Cumulative Data Fraction",
+    y = "Lift"
+  ) +
+  theme_new
+
+# Dashboard cowplot
+h2o_leaderboard <- automl_models_h2o@leaderboard
+newdata <- test_tbl
+order_by <- "auc"
+max_models <- 4
+size <- 1
+
+plot_h2o_performance <- function(h2o_leaderboard, newdata, order_by = c("auc", "logloss"),
+                                 max_models = 3, size = 1.5) {
+  # Inputs
+  leaderboard_tbl <- h2o_leaderboard %>%
+    as_tibble() %>%
+    slice(1:max_models)
+  newdata_tbl <- newdata %>%
+    as_tibble()
+  # Selecting the first, if nothing is provided
+  order_by      <- tolower(order_by[[1]]) 
+  # Convert string stored in a variable to column name (symbol)
+  order_by_expr <- rlang::sym(order_by)
+  # Turn of the progress bars ( opposite h2o.show_progress())
+  h2o.no_progress()
+  # 1. Model metrics
+  get_model_performance_metrics <- function(model_id, test_tbl) {
+    model_h2o <- h2o.getModel(model_id)
+    perf_h2o  <- h2o.performance(model_h2o, newdata = as.h2o(test_tbl))
+    perf_h2o %>%
+      h2o.metric() %>%
+      as.tibble() %>%
+      select(threshold, tpr, fpr, precision, recall)
+  }
+  model_metrics_tbl <- leaderboard_tbl %>%
+    mutate(metrics = map(model_id, get_model_performance_metrics, newdata_tbl)) %>%
+    unnest(cols = metrics) %>%
+    mutate(
+      model_id = as_factor(model_id) %>% 
+        # programmatically reorder factors depending on order_by
+        fct_reorder(!! order_by_expr, 
+                    .desc = ifelse(order_by == "auc", TRUE, FALSE)),
+      auc      = auc %>% 
+        round(3) %>% 
+        as.character() %>% 
+        as_factor() %>% 
+        fct_reorder(as.numeric(model_id)),
+      logloss  = logloss %>% 
+        round(4) %>% 
+        as.character() %>% 
+        as_factor() %>% 
+        fct_reorder(as.numeric(model_id))
+    )
+  
+  # 1A. ROC Plot
+  
+  p1 <- model_metrics_tbl %>%
+    ggplot(aes(fpr, tpr, color = model_id, linetype = !! order_by_expr)) +
+    geom_line(size = size) +
+    theme_new +
+    labs(title = "ROC", x = "FPR", y = "TPR") +
+    theme(legend.direction = "vertical") 
+  
+  
+  # 1B. Precision vs Recall
+  
+  p2 <- model_metrics_tbl %>%
+    ggplot(aes(recall, precision, color = model_id, linetype = !! order_by_expr)) +
+    geom_line(size = size) +
+    theme_new +
+    labs(title = "Precision Vs Recall", x = "Recall", y = "Precision") +
+    theme(legend.position = "none") 
+  
+  
+  # 2. Gain / Lift
+  
+  get_gain_lift <- function(model_id, test_tbl) {
+    
+    model_h2o <- h2o.getModel(model_id)
+    perf_h2o  <- h2o.performance(model_h2o, newdata = as.h2o(test_tbl)) 
+    
+    perf_h2o %>%
+      h2o.gainsLift() %>%
+      as.tibble() %>%
+      select(group, cumulative_data_fraction, cumulative_capture_rate, cumulative_lift)
+    
+  }
+  
+  gain_lift_tbl <- leaderboard_tbl %>%
+    mutate(metrics = map(model_id, get_gain_lift, newdata_tbl)) %>%
+    unnest(cols = metrics) %>%
+    mutate(
+      model_id = as_factor(model_id) %>% 
+        fct_reorder(!! order_by_expr, 
+                    .desc = ifelse(order_by == "auc", TRUE, FALSE)),
+      auc  = auc %>% 
+        round(3) %>% 
+        as.character() %>% 
+        as_factor() %>% 
+        fct_reorder(as.numeric(model_id)),
+      logloss = logloss %>% 
+        round(4) %>% 
+        as.character() %>% 
+        as_factor() %>% 
+        fct_reorder(as.numeric(model_id))
+    ) %>%
+    rename(
+      gain = cumulative_capture_rate,
+      lift = cumulative_lift
+    ) 
+  
+  # 2A. Gain Plot
+  
+  p3 <- gain_lift_tbl %>%
+    ggplot(aes(cumulative_data_fraction, gain, 
+               color = model_id, linetype = !! order_by_expr)) +
+    geom_line(size = size,) +
+    geom_segment(x = 0, y = 0, xend = 1, yend = 1, 
+                 color = "red", size = size, linetype = "dotted") +
+    theme_new +
+    expand_limits(x = c(0, 1), y = c(0, 1)) +
+    labs(title = "Gain",
+         x = "Cumulative Data Fraction", y = "Gain") +
+    theme(legend.position = "none")
+  
+  # 2B. Lift Plot
+  
+  p4 <- gain_lift_tbl %>%
+    ggplot(aes(cumulative_data_fraction, lift, 
+               color = model_id, linetype = !! order_by_expr)) +
+    geom_line(size = size) +
+    geom_segment(x = 0, y = 1, xend = 1, yend = 1, 
+                 color = "red", size = size, linetype = "dotted") +
+    theme_new +
+    expand_limits(x = c(0, 1), y = c(0, 1)) +
+    labs(title = "Lift",
+         x = "Cumulative Data Fraction", y = "Lift") +
+    theme(legend.position = "none") 
+  
+  
+  # Combine using cowplot
+  
+  # cowplot::get_legend extracts a legend from a ggplot object
+  p_legend <- get_legend(p1)
+  # Remove legend from p1
+  p1 <- p1 + theme(legend.position = "none")
+  
+  # cowplot::plt_grid() combines multiple ggplots into a single cowplot object
+  p <- cowplot::plot_grid(p1, p2, p3, p4, ncol = 2)
+  
+  # cowplot::ggdraw() sets up a drawing layer
+  p_title <- ggdraw() + 
+    
+    # cowplot::draw_label() draws text on a ggdraw layer / ggplot object
+    draw_label("H2O Model Metrics", size = 18, fontface = "bold", 
+               color = "#2C3E50")
+  
+  p_subtitle <- ggdraw() + 
+    draw_label(glue("Ordered by {toupper(order_by)}"), size = 10,  
+               color = "#2C3E50")
+  
+  # Combine everything
+  ret <- plot_grid(p_title, p_subtitle, p, p_legend, 
+                   
+                   # Adjust the relative spacing, so that the legends always fits
+                   ncol = 1, rel_heights = c(0.05, 0.05, 1, 0.05 * max_models))
+  
+  h2o.show_progress()
+  
+  return(ret)
+  
+}
+
+
+
+automl_models_h2o@leaderboard %>%
+  plot_h2o_performance(newdata = test_tbl, order_by = "logloss", 
+                       size = 0.5, max_models = 4)
+```
+
+# Session - 12 - LIME
+## Part I
+```{r}
+library(h2o)
+library(recipes)
+library(readxl)
+library(tidyverse)
+library(tidyquant)
+library(lime)
+library(rsample)
+library(recipes)
+
+process_hr_data_readable <- function(data, definitions_tbl) {
+  
+  definitions_list <- definitions_tbl %>%
+    fill(...1, .direction = "down") %>%
+    filter(!is.na(...2)) %>%
+    separate(...2, into = c("key", "value"), sep = " '", remove = TRUE) %>%
+    rename(column_name = ...1) %>%
+    mutate(key = as.numeric(key)) %>%
+    mutate(value = value %>% str_replace(pattern = "'", replacement = "")) %>%
+    split(.$column_name) %>%
+    map(~ select(., -column_name)) %>%
+    map(~ mutate(., value = as_factor(value))) 
+  
+  for (i in seq_along(definitions_list)) {
+    list_name <- names(definitions_list)[i]
+    colnames(definitions_list[[i]]) <- c(list_name, paste0(list_name, "_value"))
+  }
+  
+  data_merged_tbl <- list(HR_Data = data) %>%
+    append(definitions_list, after = 1) %>%
+    reduce(left_join) %>%
+    select(-one_of(names(definitions_list))) %>%
+    set_names(str_replace_all(names(.), pattern = "_value", 
+                              replacement = "")) %>%
+    select(sort(names(.))) %>%
+    mutate_if(is.character, as.factor) %>%
+    mutate(
+      BusinessTravel = BusinessTravel %>% fct_relevel("Non-Travel", 
+                                                      "Travel_Rarely", 
+                                                      "Travel_Frequently"),
+      MaritalStatus  = MaritalStatus %>% fct_relevel("Single", 
+                                                     "Married", 
+                                                     "Divorced")
+    )
+  
+  return(data_merged_tbl)
+  
+}
+
+# Load Data
+employee_attrition_tbl <- read_csv("./00_data/09_automated_ML_h2o/datasets-1067-1925-WA_Fn-UseC_-HR-Employee-Attrition.csv")
+definitions_raw_tbl    <- read_excel("./00_data/09_automated_ML_h2o/data_definitions.xlsx", sheet = 1, col_names = FALSE)
+
+employee_attrition_readable_tbl <- process_hr_data_readable(employee_attrition_tbl, definitions_raw_tbl)
+
+# Split into test and train
+set.seed(seed = 1113)
+split_obj <- rsample::initial_split(employee_attrition_readable_tbl, prop = 0.85)
+
+# Assign training and test data
+train_readable_tbl <- training(split_obj)
+test_readable_tbl  <- testing(split_obj)
+
+# ML Preprocessing Recipe 
+recipe_obj <- recipe(Attrition ~ ., data = train_readable_tbl) %>%
+  step_zv(all_predictors()) %>%
+  step_mutate_at(c("JobLevel", "StockOptionLevel"), fn = as.factor) %>% 
+  prep()
+
+
+train_tbl <- bake(recipe_obj, new_data = train_readable_tbl)
+test_tbl  <- bake(recipe_obj, new_data = test_readable_tbl)
+
+
+# 2. Models ----
+
+h2o.init()
+
+automl_leader <- h2o.loadModel("./04_Model/Business_Case_Employee_Attrition/GLM_1_AutoML_20210130_000114")
+
+
+# 3. LIME ----
+
+# 3.1 Making Predictions ----
+
+predictions_tbl <- automl_leader %>% 
+  h2o.predict(newdata = as.h2o(test_tbl)) %>%
+  as.tibble() %>%
+  bind_cols(
+    test_tbl %>%
+      select(Attrition, EmployeeNumber)
+  )
+
+test_tbl %>%
+  slice(1)
+
+# 3.2 Single Explanation ----
+
+explainer <- train_tbl %>%
+  select(-Attrition) %>%
+  lime(
+    model           = automl_leader,
+    bin_continuous  = TRUE,
+    n_bins          = 4,
+    quantile_bins   = TRUE
+  )
+
+explanation <- test_tbl %>%
+  slice(1) %>%
+  select(-Attrition) %>%
+  lime::explain(
+    
+    # Pass our explainer object
+    explainer = explainer,
+    # Because it is a binary classification model: 1
+    n_labels   = 1,
+    # number of features to be returned
+    n_features = 8,
+    # number of localized linear models
+    n_permutations = 5000,
+    # Let's start with 1
+    kernel_width   = 1
+  )
+
+explanation %>% 
+  as.tibble()
+
+case_1 <- explanation %>%
+  filter(case == 1)
+
+case_1 %>%
+  ggplot(aes(feature_desc, feature_weight)) +
+  coord_flip() +
+  geom_col(fill = ifelse(case_1$feature_weight>0,"#2A6AA4","#851800"))
+```
+
+## Part II 
+```{r}
+library(h2o)
+library(recipes)
+library(readxl)
+library(tidyverse)
+library(tidyquant)
+library(lime)
+library(rsample)
+library(dplyr)
+library(stringr)
+
+process_hr_data_readable <- function(data, definitions_tbl) {
+  
+  definitions_list <- definitions_tbl %>%
+    fill(...1, .direction = "down") %>%
+    filter(!is.na(...2)) %>%
+    separate(...2, into = c("key", "value"), sep = " '", remove = TRUE) %>%
+    rename(column_name = ...1) %>%
+    mutate(key = as.numeric(key)) %>%
+    mutate(value = value %>% str_replace(pattern = "'", replacement = "")) %>%
+    split(.$column_name) %>%
+    map(~ select(., -column_name)) %>%
+    map(~ mutate(., value = as_factor(value))) 
+  
+  for (i in seq_along(definitions_list)) {
+    list_name <- names(definitions_list)[i]
+    colnames(definitions_list[[i]]) <- c(list_name, paste0(list_name, "_value"))
+  }
+  
+  data_merged_tbl <- list(HR_Data = data) %>%
+    append(definitions_list, after = 1) %>%
+    reduce(left_join) %>%
+    select(-one_of(names(definitions_list))) %>%
+    set_names(str_replace_all(names(.), pattern = "_value", 
+                              replacement = "")) %>%
+    select(sort(names(.))) %>%
+    mutate_if(is.character, as.factor) %>%
+    mutate(
+      BusinessTravel = BusinessTravel %>% fct_relevel("Non-Travel", 
+                                                      "Travel_Rarely", 
+                                                      "Travel_Frequently"),
+      MaritalStatus  = MaritalStatus %>% fct_relevel("Single", 
+                                                     "Married", 
+                                                     "Divorced")
+    )
+  
+  return(data_merged_tbl)
+  
+}
+
+# Load Data
+employee_attrition_tbl <- read_csv("./00_data/09_automated_ML_h2o/datasets-1067-1925-WA_Fn-UseC_-HR-Employee-Attrition.csv")
+definitions_raw_tbl    <- read_excel("./00_data/09_automated_ML_h2o/data_definitions.xlsx", sheet = 1, col_names = FALSE)
+
+employee_attrition_readable_tbl <- process_hr_data_readable(employee_attrition_tbl, definitions_raw_tbl)
+
+# Split into test and train
+set.seed(seed = 1113)
+split_obj <- rsample::initial_split(employee_attrition_readable_tbl, prop = 0.85)
+
+# Assign training and test data
+train_readable_tbl <- training(split_obj)
+test_readable_tbl  <- testing(split_obj)
+
+# ML Preprocessing Recipe 
+recipe_obj <- recipe(Attrition ~ ., data = train_readable_tbl) %>%
+  step_zv(all_predictors()) %>%
+  step_mutate_at(c("JobLevel", "StockOptionLevel"), fn = as.factor) %>% 
+  prep()
+
+train_tbl <- bake(recipe_obj, new_data = train_readable_tbl)
+test_tbl  <- bake(recipe_obj, new_data = test_readable_tbl)
+
+
+# 2. Models ----
+
+h2o.init()
+
+automl_leader <- h2o.loadModel("./04_Model/Business_Case_Employee_Attrition/GLM_1_AutoML_20210130_000114")
+
+# 3. LIME ----
+
+# 3.1 Making Predictions ----
+
+predictions_tbl <- automl_leader %>% 
+  h2o.predict(newdata = as.h2o(test_tbl)) %>%
+  as.tibble() %>%
+  bind_cols(
+    test_tbl %>%
+      select(Attrition, EmployeeNumber)
+  )
+
+test_tbl %>%
+  slice(1)
+
+# Multiple Explanations ----
+
+explainer <- train_tbl %>%
+  select(-Attrition) %>%
+  lime(
+    model           = automl_leader,
+    bin_continuous  = TRUE,
+    n_bins          = 4,
+    quantile_bins   = TRUE
+  )
+
+
+explanation <- test_tbl %>%
+  slice(1:20) %>%
+  select(-Attrition) %>%
+  lime::explain(
+    explainer = explainer,
+    n_labels   = 1,
+    n_features = 8,
+    n_permutations = 5000,
+    kernel_width   = 0.5
+  )
+
+explanation <- explanation %>%  
+  mutate(case = as.numeric(case)) %>%
+  mutate(feature_desc = as.character(feature_desc)) %>%
+  mutate(feature_desc2 = gsub("[^a-zA-Z]", "", feature_desc))%>% 
+  mutate(feature_desc3 = gsub("[^0-9]", "", feature_desc))%>% 
+  select(feature_desc,feature_desc2,feature_desc3,case, everything()) %>% 
+  arrange(desc(feature_desc2)) %>% 
+  group_by(feature_desc2,feature_desc3,case)%>%
+  as.tibble()
+
+ggplot(explanation, aes(x = case, y = fct_inorder(feature_desc), fill =feature_weight)) +
+  facet_wrap(~ label) +
+  geom_tile() + 
+  scale_fill_gradientn(colours = c("#A42A2C", "white", "#2A6AA4"))+
+  scale_x_continuous(breaks = seq(0, 20, 1), lim = c(0, 20)) +
+  labs(
+    title    = "",
+    subtitle = "",
+    x = "Case", 
+    y = "Feature",
+    fill = "Feature weight"
+  )
+```
+
+# (Session 13 - Deep Learning) - OUT OF SCOPE
+
+
+# Reporting

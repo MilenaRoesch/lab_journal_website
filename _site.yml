@@ -5,7 +5,11 @@ navbar:
     - text: "Home"
       href: index.html
     - text: "Journal"
-      href: journal.html
+      menu:
+            - text: "Data Science Fundamentals"
+              href: journal.html
+            - text: "Machine Learning"
+              href: machine-learning_journal.html
     - text: "Class notes"
       menu:
             - text: "Dictionary"

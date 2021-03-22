@@ -13,7 +13,7 @@
 
 <meta name="date" content="2020-09-04" />
 
-<title>Milena’s Journal</title>
+<title>Data Science Fundamentals</title>
 
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -352,8 +352,20 @@ div.tocify {
         <li>
   <a href="index.html">Home</a>
 </li>
-<li>
-  <a href="journal.html">Journal</a>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    Journal
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="journal.html">Data Science Fundamentals</a>
+    </li>
+    <li>
+      <a href="machine-learning_journal.html">Machine Learning</a>
+    </li>
+  </ul>
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
@@ -391,7 +403,7 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Milena’s Journal</h1>
+<h1 class="title toc-ignore">Data Science Fundamentals</h1>
 <h4 class="author">Milena Roesch</h4>
 <h4 class="date">09/04/2020</h4>
 
@@ -403,10 +415,9 @@ div.tocify {
     background-color: #2DC6D6;
 }
 </style>
-<p># Testing some functions</p>
-<div id="olist---challenge-1-session-2" class="section level1">
-<h1><span class="header-section-number">1</span> Olist - Challenge 1, Session 2</h1>
-<p>2020 | 9 | 3 Last compiled: 2020-09-04</p>
+<p>2020 | 9 | 3 Last compiled: 2021-03-22</p>
+<div id="olist---session-2---intro-to-the-tidyverse" class="section level1">
+<h1><span class="header-section-number">1</span> Olist - Session 2 - Intro to the tidyverse</h1>
 <p>The first challenge of the course consisted of two parts: 1. Sales by location and year 2. Redoing the initial analysis using english translations to the product categories</p>
 <div id="sales-by-location-and-year" class="section level2">
 <h2><span class="header-section-number">1.1</span> Sales by location and year</h2>
@@ -637,28 +648,429 @@ revenue_by_year_engl_cat_main_tbl %&gt;%
 #saveRDS(order_items_wrangled_tbl, &quot;00_data/01_e-commerce/04_wrangled_data_student/challenge1/order_items.rds&quot;)</code></pre>
 </div>
 </div>
-<div id="my-second-post-note-the-order" class="section level1">
-<h1><span class="header-section-number">2</span> My second post (note the order)</h1>
-<p>2018 | 7 | 23 Last compiled: 2020-09-04</p>
-<p>xy</p>
+<div id="data-scraping-from-an-api-and-a-bike-website---session-3---data-acquisition" class="section level1">
+<h1><span class="header-section-number">2</span> Data Scraping from an API and a bike website - Session 3 - Data Acquisition</h1>
+<div id="scraping-twitter-data" class="section level2">
+<h2><span class="header-section-number">2.1</span> Scraping Twitter Data</h2>
+<pre class="r"><code>#install.packages(&quot;twitteR&quot;) #install package
+library(twitteR) #load package
+
+#consumer_key &lt;- #not able to be shown on My Journal Website due to security reasons
+#consumer_secret &lt;- #not able to be shown on My Journal Website due to security reasons 
+#access_token &lt;- #not able to be shown on My Journal Website due to security reasons
+#access_secret &lt;- #not able to be shown on My Journal Website due to security reasons
+
+#setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+
+#virus &lt;- searchTwitter(&#39;#wendlergate&#39;, n = 200, since = &#39;2020-09-01&#39;, retryOnRateLimit = 1e3)
+#virus_df = twListToDF(virus)</code></pre>
 </div>
-<div id="adding-r-stuff" class="section level1">
-<h1><span class="header-section-number">3</span> Adding R stuff</h1>
-<p>So far this is just a blog where you can write in plain text and serve your writing to a webpage. One of the main purposes of this lab journal is to record your progress learning R. The reason I am asking you to use this process is because you can both make a website, and a lab journal, and learn R all in R-studio. This makes everything really convenient and in the sam place.</p>
-<p>So, let’s say you are learning how to make a histogram in R. For example, maybe you want to sample 100 numbers from a normal distribution with mean = 0, and standard deviation =1, and then you want to plot a histogram. You can do this right here by using an r code block, like this:</p>
-<pre class="r"><code>samples &lt;- rnorm(100, mean=0, sd=1)
-hist(samples)</code></pre>
-<p><img src="journal_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
-<p>When you knit this R Markdown document, you will see that the histogram is printed to the page, along with the R code. This document can be set up to hide the R code in the webpage, just delete the comment (hashtag), from the cold folding option in the yaml header up top. For purposes of letting yourself see the code, and me see the code, best to keep it the way that it is. You learn all of these things and more can be customized in each R code block.</p>
+<div id="webscraping" class="section level2">
+<h2><span class="header-section-number">2.2</span> Webscraping</h2>
+<pre class="r"><code># WEBSCRAPING ----
+
+# 1.0 LIBRARIES ----
+
+library(tidyverse) # Main Package - Loads dplyr, purrr
+library(rvest)     # HTML Hacking &amp; Web Scraping
+library(xopen)     # Quickly opening URLs
+library(jsonlite)  # converts JSON files to R objects
+library(glue)      # concatenate strings
+library(stringi)   # character string/text processing
+library(stringr)
+library(RSQLite)
+
+# 2.0 OPEN URL ----
+url_home          &lt;- &quot;https://www.radon-bikes.de/roadbike/carbon/bikegrid/&quot;
+xopen(url_home) # Open links directly from RStudio to inspect them</code></pre>
+<pre><code>## Running cmd /c start &quot;\&quot;\&quot;&quot; /b \
+##   &quot;https://www.radon-bikes.de/roadbike/carbon/bikegrid/&quot;</code></pre>
+<pre class="r"><code># Read in the HTML for category of carbon bikes
+html_home         &lt;- read_html(url_home)
+
+# 3.0 WEB SCRAPING ----
+#Web scrape the product names
+product_name_tbl &lt;- html_home %&gt;%
+  #Get the nodes for the product names ...
+  html_nodes(css = &quot;.m-bikegrid__info &gt; a &gt; div &gt; h4&quot;) %&gt;%
+  # ...and extract the text of the html attribute
+  html_text() %&gt;%
+  # Delete the unnecessary formatting
+  str_replace_all(&quot;[\t\n\r\v\f]&quot; , &quot;&quot;) %&gt;%
+  # Delete whitespace
+  trimws() %&gt;%
+  # Convert vector to tibble
+  enframe(name = &quot;position&quot;, value = &quot;product_name&quot;)
+
+#Web scrape the product prices
+product_price_tbl &lt;- html_home %&gt;%
+  #Get the nodes for the product prices ...
+  html_nodes(css = &quot;.currency_eur &gt; .m-bikegrid__price--active&quot;) %&gt;%
+  # ...and extract the information of the span attribute
+  html_text(&quot;span&quot;) %&gt;%
+  # Convert vector to tibble
+  enframe(name = &quot;position&quot;, value = &quot;product_price&quot;)
+
+# 4.0 DATABASE  ----
+# Create a database
+conn &lt;- RSQLite::dbConnect(drv    = SQLite(), 
+                          dbname = &quot;00_data/03_bike_shop/Radon_carbon_bikes.sqlite&quot;)
+# Write tables to database
+dbWriteTable(conn, &quot;bike_names&quot;, product_name_tbl, overwrite=TRUE)
+dbWriteTable(conn, &quot;bike_prices&quot;, product_price_tbl, overwrite=TRUE)
+
+# List tables of database 
+# dbListTables(conn)
+
+# Get price and respective product Name from database
+dbGetQuery(conn, &quot;SELECT product_name, product_price FROM bike_names, bike_prices WHERE bike_names.position = bike_prices.position&quot;)</code></pre>
+<pre><code>##         product_name product_price
+## 1     SPIRE DISC 8.0        2029 \200
+## 2     SPIRE DISC 9.0        2629 \200
+## 3    SPIRE DISC 10.0        3329 \200
+## 4  VAILLANT DISC 8.0        2029 \200
+## 5  VAILLANT DISC 9.0        2629 \200
+## 6 VAILLANT DISC 10.0        3549 \200</code></pre>
+<pre class="r"><code>dbDisconnect(conn)</code></pre>
 </div>
-<div id="the-big-idea" class="section level1">
-<h1><span class="header-section-number">4</span> The big idea</h1>
-<p>Use this lab journal to record what you do in R. This way I will be able to see what you are doing and help you along the way. You will also be creating a repository of all the things you do. You can make posts about everything. Learning specific things in R (project unrelated), and doing things for the project that we will discuss at the beginning of the Fall semester. You can get started now by fiddling around with googling things, and trying stuff out in R. I’ve placed some helpful starting links in the links page on this website</p>
 </div>
-<div id="what-can-you-do-right-now-by-yourself" class="section level1">
-<h1><span class="header-section-number">5</span> What can you do right now by yourself?</h1>
-<p>It’s hard to learn programming when you don’t have specific problems that you are trying to solve. Everything just seems abstract.</p>
-<p>I wrote an <a href="https://crumplab.github.io/programmingforpsych/">introductory programming book that introduces R</a>, and gives some <a href="https://crumplab.github.io/programmingforpsych/programming-challenges-i-learning-the-fundamentals.html">concrete problems for you to solve</a>.</p>
+<div id="data-wrangling-with-patent-data---session-4---data-wrangling" class="section level1">
+<h1><span class="header-section-number">3</span> Data Wrangling with Patent Data - Session 4 - Data Wrangling</h1>
+<pre class="r"><code># 1.0 LIBRARIES ----
+#install.packages(&quot;data.table&quot;)
+#install.packages(&quot;vroom&quot;)
+#install.packages(&quot;tictoc&quot;)
+
+
+# Tidyverse
+library(tidyverse)
+library(vroom)
+
+# Data Table
+library(data.table)
+
+# Counter
+library(tictoc)
+
+# Importing Data ------
+# assignee
+col_types &lt;- list(
+  id = col_character(),
+  type = col_skip(),
+  name_first = col_skip(),
+  name_last = col_skip(),
+  organization = col_character()
+)
+
+assignee_tbl &lt;- vroom(
+  file       = &quot;00_data/04_patents/assignee.tsv&quot;, 
+  delim      = &quot;\t&quot;, 
+  col_names = names(col_types),
+  col_types  = col_types,
+  na         = c(&quot;&quot;, &quot;NA&quot;, &quot;NULL&quot;)
+)
+
+setDT(assignee_tbl)
+
+# patent assignee
+col_types &lt;- list(
+  patent_id = col_character(),
+  assignee_id = col_character(),
+  location_id = col_skip()
+)
+
+patent_assignee_tbl &lt;- vroom(
+  file       = &quot;00_data/04_patents/patent_assignee.tsv&quot;, 
+  delim      = &quot;\t&quot;, 
+  col_names = names(col_types),
+  col_types  = col_types,
+  na         = c(&quot;&quot;, &quot;NA&quot;, &quot;NULL&quot;)
+)
+
+setDT(patent_assignee_tbl)
+
+# patent
+col_types &lt;- list(
+  id = col_character(),
+  type = col_skip(),
+  number = col_skip(),
+  country = col_skip(),
+  date = col_date(&quot;%Y-%m-%d&quot;),
+  abstract = col_skip(),
+  title = col_skip(),
+  kind = col_skip(),
+  num_claims = col_skip(),
+  filename = col_skip(),
+  withdrawn = col_skip()
+ )
+ 
+ patent_tbl &lt;- vroom(
+   file       = &quot;00_data/04_patents/patent.tsv&quot;, 
+   delim      = &quot;\t&quot;, 
+   col_names  = names(col_types),
+   col_types  = col_types,
+   na         = c(&quot;&quot;, &quot;NA&quot;, &quot;NULL&quot;)
+ )
+ 
+ setDT(patent_tbl)
+ 
+# uspc
+col_types &lt;- list(
+  uuid = col_skip(),
+  patent_id = col_character(),
+  mainclass_id = col_character(),
+  subclass_id = col_skip(),
+  sequence = col_skip()
+)
+
+uspc_tbl &lt;- vroom(
+  file       = &quot;00_data/04_patents/uspc.tsv&quot;,
+  delim      = &quot;\t&quot;,
+  col_names  = names(col_types),
+  col_types  = col_types,
+  na         = c(&quot;&quot;, &quot;NA&quot;, &quot;NULL&quot;)
+)
+
+setDT(uspc_tbl)
+
+# mainclass description
+col_types &lt;- list(
+  id = col_character(),
+  title = col_character())
+
+mainclass_current_tbl &lt;- vroom(
+  file       = &quot;00_data/04_patents/mainclass_current.tsv&quot;, 
+  delim      = &quot;\t&quot;, 
+  col_names  = names(col_types),
+  col_types  = col_types,
+  na         = c(&quot;&quot;, &quot;NA&quot;, &quot;NULL&quot;)
+)
+setDT(mainclass_current_tbl)
+
+# Change of column names to avoid misalignment
+
+setnames(patent_assignee_tbl, &quot;assignee_id&quot;, &quot;id&quot;)
+setnames(patent_tbl, &quot;id&quot;, &quot;patent_id&quot;)
+setnames(mainclass_current_tbl, &quot;id&quot;, &quot;mainclass_id&quot;)
+
+# Joining tables -----
+# Combine assignee_tbl with patent_assignee_tbl
+combined_patent_patent_assignee_tbl &lt;- merge(x = assignee_tbl, y = patent_assignee_tbl, 
+                       by    = &quot;id&quot;, 
+                       all.x = TRUE, 
+                       all.y = FALSE)
+setDT(combined_patent_patent_assignee_tbl)
+rm(assignee_tbl, patent_assignee_tbl)
+gc()</code></pre>
+<pre><code>##             used  (Mb) gc trigger   (Mb)  max used   (Mb)
+## Ncells  11844811 632.6   25676368 1371.3  11914280  636.3
+## Vcells 111885876 853.7  180541839 1377.5 155252214 1184.5</code></pre>
+<pre class="r"><code># Combine result with patent_tbl
+combined_patent_patent_assignee_patent_tbl &lt;- merge(x = combined_patent_patent_assignee_tbl, y = patent_tbl, 
+                                             by    = &quot;patent_id&quot;, 
+                                             all.x = TRUE, 
+                                             all.y = FALSE)
+setDT(combined_patent_patent_assignee_patent_tbl)
+rm(combined_patent_patent_assignee_tbl, patent_tbl)
+gc()</code></pre>
+<pre><code>##             used  (Mb) gc trigger   (Mb)  max used   (Mb)
+## Ncells  11652993 622.4   25676368 1371.3  11914280  636.3
+## Vcells 104092358 794.2  180541839 1377.5 178577817 1362.5</code></pre>
+<pre class="r"><code># Combine result with uspc_tbl
+combined_patent_patent_assignee_patent_uspc_tbl &lt;- merge(x = combined_patent_patent_assignee_patent_tbl, y = uspc_tbl, 
+                                                    by    = &quot;patent_id&quot;, 
+                                                    all.x = TRUE, 
+                                                    all.y = FALSE)
+setDT(combined_patent_patent_assignee_patent_uspc_tbl)
+rm(combined_patent_patent_assignee_patent_tbl, uspc_tbl)
+gc()</code></pre>
+<pre><code>##             used   (Mb) gc trigger   (Mb)  max used   (Mb)
+## Ncells  10976984  586.3   25676368 1371.3  11914280  636.3
+## Vcells 134128534 1023.4  289217582 2206.6 248906759 1899.1</code></pre>
+<pre class="r"><code># Combine result with mainclass_current_tbl
+combined_patent_data_tbl &lt;- merge(x = combined_patent_patent_assignee_patent_uspc_tbl, y = mainclass_current_tbl, 
+                                                         by    = &quot;mainclass_id&quot;, 
+                                                         all.x = TRUE, 
+                                                         all.y = FALSE)
+setDT(combined_patent_data_tbl)
+rm(combined_patent_patent_assignee_patent_uspc_tbl, mainclass_current_tbl)
+gc()</code></pre>
+<pre><code>##             used   (Mb) gc trigger   (Mb)  max used   (Mb)
+## Ncells  10977005  586.3   25676368 1371.3  11914280  636.3
+## Vcells 153328286 1169.9  358913784 2738.3 327244346 2496.7</code></pre>
+<pre class="r"><code># Preparing the data table  -----
+
+setkey(combined_patent_data_tbl, &quot;organization&quot;, &quot;date&quot;, &quot;mainclass_id&quot;)
+key(combined_patent_data_tbl)</code></pre>
+<pre><code>## [1] &quot;organization&quot; &quot;date&quot;         &quot;mainclass_id&quot;</code></pre>
+<pre class="r"><code>?setorder()
+setorderv(combined_patent_data_tbl, c(&quot;organization&quot;, &quot;date&quot;, &quot;mainclass_id&quot;))
+
+# 1 - Top 10 US organizations with the most patents -----
+combined_patent_data_tbl %&gt;%
+  group_by(id)%&gt;%
+  filter(!is.na(organization))%&gt;%
+  count(organization, sort = TRUE)%&gt;%
+  head(n = 10)</code></pre>
+<pre><code>## # A tibble: 10 x 3
+## # Groups:   id [10]
+##    id                       organization                                     n
+##    &lt;chr&gt;                    &lt;chr&gt;                                        &lt;int&gt;
+##  1 org_ONzMjdbZXiKfw4L0cXl6 International Business Machines Corporation 345118
+##  2 org_pCbqlmAg8wlWzoi18ITD Samsung Electronics Co., Ltd.               204838
+##  3 org_eAKK85fawH0NS7AdXOig Canon Kabushiki Kaisha                      187338
+##  4 org_rWEJSmVQtQg24yFJqVRb General Electric Company                    145473
+##  5 org_yOSqt2KbCZQB2LRNpEKS Hitachi, Ltd.                               140677
+##  6 org_EccJQIigrq4WyGinD0b8 Kabushiki Kaisha Toshiba                    139423
+##  7 org_g8U335TH48QmGJOIQnNl Sony Corporation                            138638
+##  8 org_f0ZEyISdLqKONLOyVOev Fujitsu Limited                             103374
+##  9 org_OrmhECOcsM3rq5b7Pxfe Intel Corporation                            98653
+## 10 org_WX2Md025ShOVLD08FWsB Matsushita Electric Industrial Co., Ltd.     98038</code></pre>
+<pre class="r"><code># 2 - Top 10 US organizations with the most patents in 2019 ----
+combined_patent_data_tbl %&gt;%
+  group_by(id)%&gt;%
+  filter(!is.na(organization))%&gt;%
+  filter(year(date) == 2019)%&gt;%
+  count(organization, sort = TRUE)%&gt;%
+  head(n = 10)</code></pre>
+<pre><code>## # A tibble: 10 x 3
+## # Groups:   id [10]
+##    id                       organization                                    n
+##    &lt;chr&gt;                    &lt;chr&gt;                                       &lt;int&gt;
+##  1 org_ONzMjdbZXiKfw4L0cXl6 International Business Machines Corporation  9265
+##  2 org_pCbqlmAg8wlWzoi18ITD Samsung Electronics Co., Ltd.                7215
+##  3 org_eAKK85fawH0NS7AdXOig Canon Kabushiki Kaisha                       3595
+##  4 org_OrmhECOcsM3rq5b7Pxfe Intel Corporation                            3534
+##  5 org_dfvuIWENawcU6lTd1Z3w LG Electronics Inc.                          3317
+##  6 org_H7LOm1ExbYhoyoa0saj4 Microsoft Technology Licensing, LLC          3106
+##  7 org_MO6EJRM1uhBUFxIjWimJ Apple Inc.                                   2869
+##  8 org_OLHrQpW94MhYqmfa2oPi Ford Global Technologies, LLC                2624
+##  9 org_EIkIzlWRWMxJjhgkIAoX Amazon Technologies, Inc.                    2544
+## 10 org_OphuBrUyASm8ZMSfynyF Huawei Technologies Co., Ltd.                2454</code></pre>
+<pre class="r"><code># 3 - Top 5 USPTO Classes of top 10 organizations ----
+combined_patent_data_tbl %&gt;%
+  select(id, organization, mainclass_id, title)%&gt;%
+  group_by(id)%&gt;%
+  filter(!is.na(organization))%&gt;%
+  filter(!is.na(mainclass_id))%&gt;%
+  filter(title != &quot;DOES NOT EXIST&quot;) %&gt;%
+  filter(title != &quot;unclassified&quot;) %&gt;%
+  count(organization, title, sort = TRUE)%&gt;%
+  head(n = 10)</code></pre>
+<pre><code>## # A tibble: 10 x 4
+## # Groups:   id [9]
+##    id            organization              title                               n
+##    &lt;chr&gt;         &lt;chr&gt;                     &lt;chr&gt;                           &lt;int&gt;
+##  1 org_lyNcyopx~ Fuji Photo Film Co., Ltd. RADIATION IMAGERY CHEMISTRY: P~ 24973
+##  2 org_ONzMjdbZ~ International Business M~ ACTIVE SOLID-STATE DEVICES (E.~ 21754
+##  3 org_cCD27JtU~ Bayer Aktiengesellschaft  ORGANIC COMPOUNDS -- PART OF T~ 21710
+##  4 org_8WujSDQF~ Eastman Kodak Company     RADIATION IMAGERY CHEMISTRY: P~ 19628
+##  5 org_pCbqlmAg~ Samsung Electronics Co.,~ ACTIVE SOLID-STATE DEVICES (E.~ 19522
+##  6 org_eAKK85fa~ Canon Kabushiki Kaisha    FACSIMILE AND STATIC PRESENTAT~ 18826
+##  7 org_Ax4AmmkQ~ Micron Technology, Inc.   SEMICONDUCTOR DEVICE MANUFACTU~ 18664
+##  8 org_Ax4AmmkQ~ Micron Technology, Inc.   ACTIVE SOLID-STATE DEVICES (E.~ 18132
+##  9 org_EccJQIig~ Kabushiki Kaisha Toshiba  ACTIVE SOLID-STATE DEVICES (E.~ 18012
+## 10 org_r7L34966~ BASF Aktiengesellschaft   ORGANIC COMPOUNDS -- PART OF T~ 17388</code></pre>
+</div>
+<div id="data-visualization-of-covid-data---session-5---data-visualization" class="section level1">
+<h1><span class="header-section-number">4</span> Data Visualization of COVID Data - Session 5 - Data Visualization</h1>
+<pre class="r"><code>library(tidyverse)
+library(lubridate)
+library(maps)
+library(scales)
+
+covid_data_tbl &lt;- read_csv(&quot;https://opendata.ecdc.europa.eu/covid19/casedistribution/csv&quot;)
+
+# Challenge 1 -----------------
+# Format data ----
+cumulative_cases_by_day_tbl &lt;- covid_data_tbl %&gt;%
+  select(dateRep, cases, countriesAndTerritories) %&gt;%
+  filter(countriesAndTerritories %in% c(&quot;Germany&quot;,&quot;United_Kingdom&quot;, &quot;France&quot;, &quot;Spain&quot;, &quot;United_States_of_America&quot;)) %&gt;%
+
+  # Grouping by country &amp; date, and cumulatively summarize number of cases
+  group_by(countriesAndTerritories) %&gt;%
+  mutate(dateRep = as.Date(dateRep, &quot;%d/%m/%Y&quot;)) %&gt;%
+  arrange(dateRep) %&gt;%
+  mutate(cumulative_cases = cumsum(cases)) %&gt;%
+  ungroup()
+
+#cumulative_cases_by_day_tbl
+
+# Plot ----
+cumulative_cases_by_day_tbl %&gt;%
+  ggplot(aes(x = dateRep, y = cumulative_cases, color = countriesAndTerritories)) +
+  geom_line(size = 1) +
+  scale_color_brewer(palette = &quot;Accent&quot;) +
+  labs(
+    title = &quot;COVID-19 confirmed cases worldwide&quot;,
+    subtitle = &quot;As of 11/2020&quot;,
+    x = &quot;Year 2020&quot;,
+    y = &quot;Confirmed CoVID-19 cases&quot;,
+    color = &quot;Country&quot;
+  ) +
+  theme_gray() +
+  theme(legend.position  = &quot;right&quot;,
+        legend.direction = &quot;vertical&quot;,
+        plot.title = element_text(face = &quot;bold&quot;),
+        axis.text.x = element_text(angle = 45)) +
+  scale_x_date(
+    date_breaks = &quot;1 month&quot;, date_labels = &quot;%B&quot;,
+    date_minor_breaks = &quot;1 month&quot;
+  ) +
+  scale_y_continuous(
+    breaks = seq(0, 15000000, by = 2500000),
+    labels = scales::label_number_si(accuracy = 0.1),
+    minor_breaks = seq(0, 10000000, by = 1250000)
+  )</code></pre>
+<p><img src="journal_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<pre class="r"><code># Challenge 2 ----------
+world &lt;- map_data(&quot;world&quot;)
+cumulative_deaths_per_country_tbl &lt;- covid_data_tbl %&gt;%
+  select(popData2019, deaths, countriesAndTerritories) %&gt;%
+  group_by(countriesAndTerritories) %&gt;% 
+  summarise(total_deaths = sum(deaths), population_2019 = median(popData2019)) %&gt;%
+  ungroup() %&gt;%
+  mutate(across(countriesAndTerritories, str_replace_all, &quot;_&quot;, &quot; &quot;)) %&gt;%
+  mutate(countriesAndTerritories = case_when(
+    countriesAndTerritories == &quot;United Kingdom&quot; ~ &quot;UK&quot;,
+    countriesAndTerritories == &quot;United States of America&quot; ~ &quot;USA&quot;,
+    countriesAndTerritories == &quot;Czechia&quot; ~ &quot;Czech Republic&quot;,
+    TRUE ~ countriesAndTerritories
+  )) %&gt;%
+  mutate (mortality_rate = total_deaths/population_2019) %&gt;%
+  rename(&quot;region&quot; = &quot;countriesAndTerritories&quot;)
+
+world_mortality_rate_covid &lt;- left_join(world, cumulative_deaths_per_country_tbl)
+# 
+ggplot(world_mortality_rate_covid) +
+  geom_map(aes(map_id = region, fill = mortality_rate), map = world_mortality_rate_covid, data = world_mortality_rate_covid) +
+  expand_limits(x = world_mortality_rate_covid$long, y = world_mortality_rate_covid$lat) +
+  labs(
+        title = &quot;Mortality rate of COVID-19 worldwide&quot;,
+        subtitle = &quot;As of 11/2020&quot;,
+        x = NULL,
+        y = NULL,
+        fill = &quot;Mortality Rate&quot;
+      ) +
+  theme(
+    axis.text = element_blank(),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    panel.border = element_blank(),
+    panel.grid = element_blank(),
+    axis.title = element_blank()
+  ) +
+  scale_fill_gradient(
+    low = &quot;#D80000&quot;,
+    high = &quot;#3F0000&quot;,
+    space = &quot;Lab&quot;,
+    na.value = &quot;grey50&quot;,
+    guide = &quot;colourbar&quot;,
+    aesthetics = &quot;fill&quot;,
+    breaks = seq(0.0000, 0.0012, by=0.0003), 
+    labels = scales::percent_format(accuracy = 0.001)
+    )</code></pre>
+<p><img src="journal_files/figure-html/unnamed-chunk-6-2.png" width="672" /></p>
 </div>
 
 
